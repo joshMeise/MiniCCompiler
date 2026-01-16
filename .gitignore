@@ -1,0 +1,15 @@
+# Miscellaneous
+.nvim_backup/
+.dSYM
+
+# C
+*.o
+*.out
+*.exe
+*.a
+*.so
+*.obj
+
+# Lex and Yacc
+lex.yy.c
+y.tab.*
