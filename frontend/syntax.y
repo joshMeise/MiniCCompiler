@@ -4,17 +4,19 @@
  * Josh Meise
  * 01-16-2026
  * Description: 
- * - Defines syntax for a MiniC program
+ * - Defines syntax for a MiniC program.
  *
  * Citations:
  *
  * Questions:
- * - Can we declare adn define variables on the same line?
+ * - Can we declare and define variables on the same line?
+ *      - Declarations and definitions cannot be combined.
  * - Can if statement and while loop conditions just be a single variable (i.e. not necessarily a full expression)?
+ *      - Can be a single variable. Can just have a single term.
  * - Can we have void functions?
- * - Should we mandate a return in an int function and allow a return in a void function?
+ *      - No void functions.
  * - Should we expect return to always be at the bottom of function?
- * - Should we enforce variables being declared at the top of functions in syntax analysis phase?
+ *      - No. Returns may be treated like any other statement.
  *
  * TODO:
  *
@@ -72,6 +74,65 @@ variable_decs: variable_dec variable_decs
 
 variable_dec: INT IDENTIFIER ';'
             ;
+
+arithmetic_expr: plus_expr
+               | minus_expr
+               | times_expr
+               | divide_expr
+               ;
+
+plus_expr: IDENTIFIER PLUS IDENTIFIER
+         | IDENTIFIER PLUS NUMBER
+         | NUMBER PLUS IDENTIFIER
+         ;
+
+minus_expr: IDENTIFIER MINUS IDENTIFIER
+          | IDENTIFIER MINUS NUMBER
+          | NUMBER MINUS IDENTIFIER
+          ;
+
+times_expr: IDENTIFIER TIMES IDENTIFIER
+          | IDENTIFIER TIMES NUMBER
+          | NUMBER TIMES IDENTIFIER
+          ;
+
+divide_expr: IDENTIFIER DIVIDE IDENTIFIER
+           | IDENTIFIER DIVIDE NUMBER
+           | NUMBER DIVIDE IDENTIFIER
+           ;
+
+relational_expr: lt_expr
+               | gt_expr
+               | leq_expr
+               | geq_expr
+               | eq_expr
+               ;
+
+lt_expr: IDENTIFIER LT IDENTIFIER
+       | IDENTIFIER LT NUMBER
+       | NUMBER LT IDENTIFIER
+       ;
+
+gt_expr: IDENTIFIER GT IDENTIFIER
+       | IDENTIFIER GT NUMBER
+       | NUMBER GT IDENTIFIER
+       ;
+
+leq_expr: IDENTIFIER LEQ IDENTIFIER
+        | IDENTIFIER LEQ NUMBER
+        | NUMBER LEQ IDENTIFIER
+        ;
+
+geq_expr: IDENTIFIER GEQ IDENTIFIER
+        | IDENTIFIER GEQ NUMBER
+        | NUMBER GEQ IDENTIFIER
+        ;
+
+eq_expr: IDENTIFIER EQ IDENTIFIER
+       | IDENTIFIER EQ NUMBER
+       | NUMBER EQ IDENTIFIER
+       ;
+
 
 %%
 

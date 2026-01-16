@@ -1,10 +1,10 @@
 /*
- * syntax.y - parser for a MiniC program
+ * syntax.l - lexer for MiniC program
  *
  * Josh Meise
  * 01-16-2026
  * Description: 
- * - Defines syntax for a MiniC program
+ * - Gets tokens for MiniC program and sends them to parser.
  *
  * Citations:
  * - ChatGPT for help getting rid of compiler warnings for unused functions.
@@ -48,7 +48,7 @@ extern int yyerror(char*);
 "=="                            { return EQ; }
 [0-9]+                          { return NUMBER; }
 [_A-Za-z][A-Za-z0-9_]*          { return IDENTIFIER; }
-[ \n\r\t]                       
+[ \n\r\t]
 .                               { return yytext[0]; }
 
 %%
