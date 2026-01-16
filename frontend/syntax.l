@@ -1,11 +1,18 @@
 /*
- * Questions:
- * - for loops?
- * - else if?
- * - can identifiers start with underscores?
- * 
+ * syntax.y - parser for a MiniC program
+ *
+ * Josh Meise
+ * 01-16-2026
+ * Description: 
+ * - Defines syntax for a MiniC program
+ *
  * Citations:
  * - ChatGPT for help getting rid of compiler warnings for unused functions.
+ *
+ * Questions:
+ *
+ * TODO:
+ *
  */
 
 %option noinput
@@ -40,7 +47,7 @@ extern int yyerror(char*);
 ">="                            { return GEQ; }
 "=="                            { return EQ; }
 [0-9]+                          { return NUMBER; }
-[_A-Za-z][A-Za-z0-9_]           { return IDENTIFIER; }
+[_A-Za-z][A-Za-z0-9_]*          { return IDENTIFIER; }
 [ \n\r\t]                       
 .                               { return yytext[0]; }
 
