@@ -1,12 +1,31 @@
 %{
 
 #include <stdio.h>
+extern int yylex(void);
+extern int yylex_destroy(void);
+extern int yywrap(void);
+int yyerror(char*);
+extern FILE *yyin;
 
 %}
+
+%token INT VOID EXTERN PRINT READ IF ELSE WHILE RETURN PLUS MINUS TIMES DIVIDE EQUALS LT GT LEQ GEQ EQ NUMBER IDENTIFIER
 
 %start program
 
 %%
+
+program: preamble
+       ;
+
+preamble: print read
+        ;
+
+print: EXTERN VOID PRINT '(' INT ')' ';'
+     ;
+
+read: EXTERN INT READ '(' ')' ';'
+    ;
 
 %%
 
@@ -23,7 +42,7 @@ int main(int argc, char** argv) {
     }
 
     // Open file.
-    if ((yyin = fopen(arg[1], "r")) == NULL) {
+    if ((yyin = fopen(argv[1], "r")) == NULL) {
         fprintf(stderr, "Failed to open file.\n");
         return 1;
     }
