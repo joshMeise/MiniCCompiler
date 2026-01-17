@@ -21,7 +21,10 @@
 %{
 
 #include "y.tab.h"
+
 extern int yyerror(char*);
+
+int linenum;
 
 %}
 
@@ -48,7 +51,8 @@ extern int yyerror(char*);
 "=="                            { return EQ; }
 [0-9]+                          { return NUMBER; }
 [_A-Za-z][A-Za-z0-9_]*          { return IDENTIFIER; }
-[ \n\r\t]
+[ \r\t]
+[\n]                            { linenum++; }
 .                               { return yytext[0]; }
 
 %%

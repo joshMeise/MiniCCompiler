@@ -12,5 +12,5 @@ $(EXECS): %: %.l %.y
 	$(CC) $(CFLAGS) lex.yy.c y.tab.c -o $@
 
 clean:
-	rm -rf $(EXECS) lex.yy.c y.tab.c y.tab.h
+	rm -rf $(EXECS) lex.yy.c y.tab.c y.tab.h y.output
 
