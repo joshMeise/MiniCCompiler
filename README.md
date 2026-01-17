@@ -16,4 +16,9 @@ MiniC is a subset of the C programming language. It followes the same syntactic 
 - Arithmetic and relational expressions may only take 2 arguments
 - Variable declarations and assignments cannot take place on the same line
 - Only a single variable may be declared on a line
+- Single-line `if` statements and `while` loops are permitted
+- Only functions that may be called are `print()` and `read()`, which are declared in the preamble
+- Comments are not pemitted
+- Logical operators are not permitted
+- Variable declarations all take place at the top of a code block
 
