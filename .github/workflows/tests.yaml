@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-parser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make test script executable
+        run: chmod +x frontend/lexer_and_parser/run_tests.sh
+
+      - name: Build lexer and parser
+        working-directory: frontend/lexer_and_parser
+        run: |
+          make clean
+          make
+
+      - name: Run tests
+        working-directory: frontend/lexer_and_parser
+        run: ./run_tests.sh
