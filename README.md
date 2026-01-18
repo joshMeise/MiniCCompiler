@@ -22,3 +22,7 @@ MiniC is a subset of the C programming language. It followes the same syntactic 
 - Logical operators are not permitted
 - Variable declarations all take place at the top of a code block
 
+## Notes
+
+AI Declaration:
+Tests were generated with the help fo ChatGPT.

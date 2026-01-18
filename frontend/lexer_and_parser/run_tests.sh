@@ -4,11 +4,17 @@ TESTDIR=./tests
 EXEC=./syntax
 FAILED=0
 
-# Check no arguments.
-if [ $# -ne 0 ] ; then
-    echo "usage: ./run_tests.sh"
+# Check arguments.
+if [[ $# -ne 0 && $# -ne 1 ]] ; then
+    echo "usage: ./run_tests.sh [-v]"
     exit 1
 fi
+
+if [[ $# -eq 1 && $1 != "-v" ]] ; then
+    echo "usage: ./run_tests.sh [-v]"
+    exit 1
+fi
+
 
 # Run passing tests and ensure that they pass.
 for test in $TESTDIR/pass.* ; do
@@ -18,7 +24,7 @@ for test in $TESTDIR/pass.* ; do
     if [ $? -ne 0 ] ; then
         echo "FAIL: $test"
         FAILED=1
-    else
+    elif [ $# -eq 1 ] ; then
         echo "PASS: $test"
     fi
 done
@@ -31,7 +37,7 @@ for test in $TESTDIR/fail.* ; do
     if [ $? -eq 0 ] ; then
         echo "FAIL: $test"
         FAILED=1
-    else
+    elif [ $# -eq 1 ] ; then
         echo "PASS: $test"
     fi
 done

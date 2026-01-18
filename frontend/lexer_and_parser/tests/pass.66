@@ -1,0 +1,9 @@
+extern void print(int);
+extern int read();
+
+int main() {
+    int a;
+    a = 66;
+    read();
+    return a;
+}

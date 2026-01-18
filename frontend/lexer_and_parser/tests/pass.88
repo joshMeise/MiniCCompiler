@@ -1,0 +1,17 @@
+extern void print(int);
+extern int read();
+
+int main() {
+    int i;
+    int sum;
+    i = 0;
+    sum = 0;
+    while (i < 88) {
+        sum = sum + i;
+        if (read() > i) {
+            sum = sum + 1;
+        }
+        i = i + 1;
+    }
+    return sum;
+}

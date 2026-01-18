@@ -1,0 +1,12 @@
+extern void print(int);
+extern int read();
+
+int main(int x) {
+    int a;
+    a = x;
+    if (a > 30) {
+        read();
+        a = a - 1;
+    }
+    return a;
+}

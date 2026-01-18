@@ -1,0 +1,13 @@
+extern void print(int);
+extern int read();
+
+int main() {
+    int a;
+    int b;
+    a = 39;
+    b = a * 2;
+    if (read() < b) {
+        print(b);
+    }
+    return b;
+}

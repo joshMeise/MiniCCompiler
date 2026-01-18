@@ -151,12 +151,14 @@ condition: '(' condition ')'
 
 condition_body: relational_expr
               | arithmetic_expr
+              | read_expr
               | IDENTIFIER
               | NUMBER
               ;
 
 expr: assignment_expr
-    | print_expr
+    | read_expr ';'
+    | print_expr ';'
     ;
 
 assignment_stmt: IDENTIFIER EQUALS assignment_expr
@@ -164,8 +166,9 @@ assignment_stmt: IDENTIFIER EQUALS assignment_expr
 
 assignment_expr: arithmetic_expr
                | relational_expr
-               | read_expr
+               | read_expr 
                | IDENTIFIER
+               | NUMBER
                ;
 
 arithmetic_expr: plus_expr
@@ -174,24 +177,16 @@ arithmetic_expr: plus_expr
                | divide_expr
                ;
 
-plus_expr: IDENTIFIER PLUS IDENTIFIER
-         | IDENTIFIER PLUS NUMBER
-         | NUMBER PLUS IDENTIFIER
+plus_expr: expr_arg PLUS expr_arg
          ;
 
-minus_expr: IDENTIFIER MINUS IDENTIFIER
-          | IDENTIFIER MINUS NUMBER
-          | NUMBER MINUS IDENTIFIER
+minus_expr: expr_arg MINUS expr_arg
           ;
 
-times_expr: IDENTIFIER TIMES IDENTIFIER
-          | IDENTIFIER TIMES NUMBER
-          | NUMBER TIMES IDENTIFIER
+times_expr: expr_arg TIMES expr_arg
           ;
 
-divide_expr: IDENTIFIER DIVIDE IDENTIFIER
-           | IDENTIFIER DIVIDE NUMBER
-           | NUMBER DIVIDE IDENTIFIER
+divide_expr: expr_arg DIVIDE expr_arg
            ;
 
 relational_expr: lt_expr
@@ -201,30 +196,25 @@ relational_expr: lt_expr
                | eq_expr
                ;
 
-lt_expr: IDENTIFIER LT IDENTIFIER
-       | IDENTIFIER LT NUMBER
-       | NUMBER LT IDENTIFIER
+lt_expr: expr_arg LT expr_arg
        ;
 
-gt_expr: IDENTIFIER GT IDENTIFIER
-       | IDENTIFIER GT NUMBER
-       | NUMBER GT IDENTIFIER
+gt_expr: expr_arg GT expr_arg
        ;
 
-leq_expr: IDENTIFIER LEQ IDENTIFIER
-        | IDENTIFIER LEQ NUMBER
-        | NUMBER LEQ IDENTIFIER
+leq_expr: expr_arg LEQ expr_arg
         ;
 
-geq_expr: IDENTIFIER GEQ IDENTIFIER
-        | IDENTIFIER GEQ NUMBER
-        | NUMBER GEQ IDENTIFIER
+geq_expr: expr_arg GEQ expr_arg
         ;
 
-eq_expr: IDENTIFIER EQ IDENTIFIER
-       | IDENTIFIER EQ NUMBER
-       | NUMBER EQ IDENTIFIER
+eq_expr: expr_arg EQ expr_arg
        ;
+
+expr_arg: read_expr
+        | IDENTIFIER
+        | NUMBER
+        ;
 
 read_expr: READ read_arg
          ;
@@ -247,7 +237,7 @@ no_args: VOID
 %%
 
 int yyerror(char* s) {
-    fprintf(stderr, "%s on line number %d\n", s, linenum);
+    fprintf(stderr, "%s on line %d\n", s, linenum);
     return 1;
 }
 

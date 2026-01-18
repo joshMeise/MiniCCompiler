@@ -1,0 +1,11 @@
+extern void print(int);
+extern int read();
+
+int main() {
+    int a;
+    a = read();
+    while (a < 44) {
+        a = a + 1;
+    }
+    return a;
+}
