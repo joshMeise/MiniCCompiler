@@ -4,6 +4,6 @@ extern int read();
 int main() {
     int a;
     a = 34;
-    read();
+    read(());
     return a;
 }
