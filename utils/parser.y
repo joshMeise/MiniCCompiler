@@ -45,7 +45,14 @@ int yyerror(char*);
 
 %}
 
-%token INT VOID EXTERN PRINT READ IF ELSE WHILE RETURN PLUS MINUS TIMES DIVIDE EQUALS LT GT LEQ GEQ EQ NUMBER IDENTIFIER
+%union {
+    int ival;
+    char* sval;
+}
+
+%token <ival> NUMBER
+%token <sval> IDENTIFIER
+%token INT VOID EXTERN PRINT READ IF ELSE WHILE RETURN PLUS MINUS TIMES DIVIDE EQUALS LT GT LEQ GEQ EQ
 
 %start program
 

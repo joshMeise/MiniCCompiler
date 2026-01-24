@@ -47,8 +47,8 @@ int linenum = 1;
 "<="                            { return LEQ; }
 ">="                            { return GEQ; }
 "=="                            { return EQ; }
-[0-9]+                          { return NUMBER; }
-[_A-Za-z][A-Za-z0-9_]*          { return IDENTIFIER; }
+[0-9]+                          { yylval.ival = atoi(yytext); return NUMBER; }
+[_A-Za-z][A-Za-z0-9_]*          { yylval.sval = strdup(yytext); return IDENTIFIER; }
 [ \r\t]
 [\n]                            { linenum++; }
 .                               { return yytext[0]; }

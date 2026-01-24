@@ -25,150 +25,150 @@ typedef struct ast_Stmt astStmt;
 
 //enum to identify node type
 typedef enum {
-		ast_prog,
-		ast_func,
-		ast_stmt,
-		ast_extern,
-		ast_var,
-		ast_cnst,
-		ast_rexpr, // For comparison expression
-		ast_bexpr, // For binary arithmetic expression
-		ast_uexpr, // For unary arithmetic expression
-	} node_type;
+    ast_prog,
+    ast_func,
+    ast_stmt,
+    ast_extern,
+    ast_var,
+    ast_cnst,
+    ast_rexpr, // For comparison expression
+    ast_bexpr, // For binary arithmetic expression
+    ast_uexpr, // For unary arithmetic expression
+} node_type;
 
 //enum to identy stmt type
 typedef enum {
-		ast_call,
-		ast_ret,
-		ast_block,
-		ast_while,
-		ast_if,
-		ast_asgn,
-		ast_decl 
-	} stmt_type;
+    ast_call,
+    ast_ret,
+    ast_block,
+    ast_while,
+    ast_if,
+    ast_asgn,
+    ast_decl 
+} stmt_type;
 
 //enum to identify op type in expressions
 typedef enum {
-		lt,// < 
-		gt,// > 
-		le,// <=
-		ge,// >= 
-		eq,// ==
-		neq// !=
+    lt,// < 
+    gt,// > 
+    le,// <=
+    ge,// >= 
+    eq,// ==
+    neq// !=
 } rop_type;
 
 typedef enum {
-		add,// +
-		sub,// -
-		divide,// /
-		mul,// *
-		uminus// -: unary minus
-	} op_type;
+    add,// +
+    sub,// -
+    divide,// /
+    mul,// *
+    uminus// -: unary minus
+} op_type;
 
 /* structs for different node types */
 
 typedef struct {
-	 	astNode* ext1; //extern function print
-		astNode* ext2; //extern function read
-		astNode* func; //function defined in input miniC program
-	} astProg;
+    astNode* ext1; //extern function print
+    astNode* ext2; //extern function read
+    astNode* func; //function defined in input miniC program
+} astProg;
 
 typedef struct {
-		char* name; // name of the function
-		astNode* param; // parameter, possibly NULL if the function doesn't take a param
-		astNode* body; //function body
-	} astFunc;
+    char* name; // name of the function
+    astNode* param; // parameter, possibly NULL if the function doesn't take a param
+    astNode* body; //function body
+} astFunc;
 
 typedef struct {
-		char* name; // For extern functions defined we will only save function names
-	} astExtern;
+    char* name; // For extern functions defined we will only save function names
+} astExtern;
 
 typedef struct {
-		char* name;
-	} astVar; 
+    char* name;
+} astVar; 
 
 typedef struct {
-		int value; //For integer contants we will store the value of the constant
-	} astConst;
+    int value; //For integer contants we will store the value of the constant
+} astConst;
 
 typedef struct {
-	  astNode* lhs;
-	  astNode* rhs;
-	  rop_type  op;
-	} astRExpr;
+    astNode* lhs;
+    astNode* rhs;
+    rop_type  op;
+} astRExpr;
 
 typedef struct {
-	  astNode* lhs;
-	  astNode* rhs;
+    astNode* lhs;
+    astNode* rhs;
     op_type op;
-	} astBExpr;
+} astBExpr;
 
 typedef struct {
-	 astNode* expr;
-	 op_type op;
-	} astUExpr;
+    astNode* expr;
+    op_type op;
+} astUExpr;
 
 /* structs for different statement types */
 typedef struct {
-		char* name;
-		astNode* param; // For read function this field will be NULL
-	} astCall;
+    char* name;
+    astNode* param; // For read function this field will be NULL
+} astCall;
 
 typedef struct {
-		astNode* expr; // Can be an expression/variable/constant
-	} astRet;
+    astNode* expr; // Can be an expression/variable/constant
+} astRet;
 
 typedef struct {
-		vector<astNode*> *stmt_list;
-	} astBlock;
+    vector<astNode*> *stmt_list;
+} astBlock;
 
 typedef struct {
-		astNode* cond;
-		astNode* body;
-	} astWhile;
+    astNode* cond;
+    astNode* body;
+} astWhile;
 
 typedef struct {
-		astNode* cond;
-		astNode* if_body;
-		astNode* else_body; //possibly NULL
-	} astIf;
+    astNode* cond;
+    astNode* if_body;
+    astNode* else_body; //possibly NULL
+} astIf;
 
 typedef struct {
-		char* name;
-	} astDecl;
+    char* name;
+} astDecl;
 
 typedef struct {
-		astNode* lhs;
-		astNode* rhs;
-	} astAsgn;
+    astNode* lhs;
+    astNode* rhs;
+} astAsgn;
 
 struct ast_Stmt{
-		stmt_type type;
-		union {
-		  astCall   call;
-		  astRet    ret;
-		  astBlock  block;
-		  astWhile  whilen;
-		  astIf     ifn;
-		  astDecl   decl;
-		  astAsgn 	asgn;
-		};
-	};
+    stmt_type type;
+    union {
+        astCall   call;
+        astRet    ret;
+        astBlock  block;
+        astWhile  whilen;
+        astIf     ifn;
+        astDecl   decl;
+        astAsgn 	asgn;
+    };
+};
 
 struct ast_Node{
-		node_type type;
-		union {
-		  astProg   prog;
-		  astFunc   func;
-		  astExtern ext;
-		  astStmt   stmt;
-		  astVar    var;
-		  astConst  cnst;
-		  astRExpr  rexpr;
-		  astBExpr  bexpr;
-      astUExpr  uexpr;
-		};
-	};
+    node_type type;
+    union {
+        astProg   prog;
+        astFunc   func;
+        astExtern ext;
+        astStmt   stmt;
+        astVar    var;
+        astConst  cnst;
+        astRExpr  rexpr;
+        astBExpr  bexpr;
+        astUExpr  uexpr;
+    };
+};
 
 
 /* 
