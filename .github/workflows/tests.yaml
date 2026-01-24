@@ -17,6 +17,12 @@ jobs:
       - name: Make test script executable
         run: chmod +x frontend/lexer_and_parser/run_tests.sh
 
+      - name: Build AST library as a dependency of parser
+        working-directory: frontend/utils
+        run: |
+          make clean
+          make
+
       - name: Build lexer, parser and test_harness
         working-directory: frontend/lexer_and_parser
         run: |
