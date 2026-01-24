@@ -1,5 +1,5 @@
 /*
- * syntax.l - lexer for MiniC program
+ * lexer.l - lexer for MiniC program
  *
  * Josh Meise
  * 01-16-2026
@@ -21,8 +21,6 @@
 %{
 
 #include "y.tab.h"
-
-extern int yyerror(char*);
 
 int linenum;
 

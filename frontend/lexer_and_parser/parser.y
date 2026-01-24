@@ -36,12 +36,9 @@
 %{
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <ast.h>
 
 extern int yylex(void);
-extern int yylex_destroy(void);
-extern int yywrap(void);
-extern FILE *yyin;
 extern int linenum;
 
 int yyerror(char*);
@@ -239,32 +236,4 @@ no_args: VOID
 int yyerror(char* s) {
     fprintf(stderr, "%s on line %d\n", s, linenum);
     return 1;
-}
-
-int main(int argc, char** argv) {
-    int ret;
-
-    // Check arguments.
-    if (argc != 2) {
-        fprintf(stderr, "No program provided.\n");
-        return 1;
-    }
-
-    // Open file.
-    if ((yyin = fopen(argv[1], "r")) == NULL) {
-        fprintf(stderr, "Failed to open file.\n");
-        return 1;
-    }
-
-    linenum = 1;
-    
-    ret = yyparse();
-
-    // Clean up.
-    fclose(yyin);
-    yylex_destroy();
-
-
-    if (ret == 0) exit(EXIT_SUCCESS);
-    else exit(EXIT_FAILURE);
 }

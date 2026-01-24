@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TESTDIR=./tests
-EXEC=./syntax
+EXEC=./test_syntax
 FAILED=0
 
 # Check arguments.
