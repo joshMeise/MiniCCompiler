@@ -17,11 +17,12 @@ jobs:
       - name: Make test script executable
         run: chmod +x frontend/lexer_and_parser/run_tests.sh
 
-      - name: Build lexer and parser
+      - name: Build lexer, parser and test_harness
         working-directory: frontend/lexer_and_parser
         run: |
           make clean
           make
+          make test_syntax
 
       - name: Run tests
         working-directory: frontend/lexer_and_parser
