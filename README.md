@@ -1,8 +1,44 @@
 # MiniCCompiler
 
+## Note to Grader:
+
+Please see the Assignment 1 branch for submission.
+
+## Description
+
+MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
+
+## Usage
+
+To run the compiler:
+- In **utils/**:
+    - `make clean`
+    - `make`
+- In **execs/**:
+    - `make clean`
+    - `make`
+    - `./compiler <source_code.c>`
+
+To run tests:
+- In **utils/**:
+    - `make clean`
+    - `make`
+- In **execs/**:
+    - `make clean`
+    - `make`
+    - `run_all_tests.sh [-v]` where the `-v` flag indicates the desire for verbose output
+
+## Project Structure
+
+- **execs/**: Executable compiler
+- **tests/**: Test harnesses and accompanying tests for each phase in the compiler's development
+- **utils/**: Parser, lexer, and modules
+- **lib/**: Compiled library of object files
+- **.github/**: GitHub Actions automated test workflow
+
 ## MiniC Syntax Guide
 
-MiniC is a subset of the C programming language. It followes the same syntactic guidelines as C with a few minor modifications:
+MiniC is a subset of the C programming language. It follows the same syntactic guidelines as C, with a few minor modifications:
 - Each file contains only one function
 - Each file contains the following prelude:
     ```C
@@ -18,11 +54,25 @@ MiniC is a subset of the C programming language. It followes the same syntactic 
 - Only a single variable may be declared on a line
 - Single-line `if` statements and `while` loops are permitted
 - Only functions that may be called are `print()` and `read()`, which are declared in the preamble
-- Comments are not pemitted
+- Comments are not permitted
 - Logical operators are not permitted
 - Variable declarations all take place at the top of a code block
 
+Below is an example MiniC program:
+```C
+extern void print(int);
+extern int read(void);
+
+int main(void) {
+    int x;
+    x = read();
+    while (x > 0)
+        x = x - 1;
+    print(x);
+    return 0;
+}
+```
+
 ## Notes
 
-AI Declaration:
-Tests were generated with the help fo ChatGPT.
+- AI Declaration: Tests were generated with the help of ChatGPT.
