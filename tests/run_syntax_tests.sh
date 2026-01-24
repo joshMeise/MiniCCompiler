@@ -1,17 +1,17 @@
 #!/bin/bash
 
-TESTDIR=./tests
+TESTDIR=./syntax_tests
 EXEC=./test_syntax
 FAILED=0
 
 # Check arguments.
 if [[ $# -ne 0 && $# -ne 1 ]] ; then
-    echo "usage: ./run_tests.sh [-v]"
+    echo "usage: ./run_syntax_tests.sh [-v]"
     exit 1
 fi
 
 if [[ $# -eq 1 && $1 != "-v" ]] ; then
-    echo "usage: ./run_tests.sh [-v]"
+    echo "usage: ./run_syntax_tests.sh [-v]"
     exit 1
 fi
 

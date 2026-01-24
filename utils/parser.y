@@ -36,7 +36,7 @@
 %{
 
 #include <stdio.h>
-#include <ast.h>
+#include "ast.h"
 
 extern int yylex(void);
 extern int linenum;

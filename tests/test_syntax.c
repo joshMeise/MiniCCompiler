@@ -12,7 +12,6 @@
 
 extern int yyparse(void);
 extern int yylex_destroy(void);
-extern int linenum;
 extern FILE* yyin;
 
 int main(int argc, char** argv) {
@@ -30,8 +29,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    linenum = 1;
-    
     ret = yyparse();
 
     // Clean up.

@@ -22,7 +22,7 @@
 
 #include "y.tab.h"
 
-int linenum;
+int linenum = 1;
 
 %}
 
