@@ -1,12 +1,9 @@
 # MiniCCompiler
 
-## Note to Grader:
-
-Please see the Assignment 1 branch for submission.
-
-## Description
-
 MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
+
+## Note to Grader:
+Please see the Assignment 1 branch for submission.
 
 ## Usage
 
