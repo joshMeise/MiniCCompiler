@@ -3,7 +3,7 @@ OFILES=ast.o y.tab.o lex.yy.o
 CXX=g++
 LEX=lex
 YACC=yacc
-WNO=-Wno-deprecated -Wno-writable-strings
+WNO=-Wno-deprecated -Wno-writable-strings -Wno-write-strings
 
 all: ../lib/libutils.a
 

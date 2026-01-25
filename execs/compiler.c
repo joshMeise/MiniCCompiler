@@ -9,10 +9,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ast.h>
 
 extern int yyparse(void);
 extern int yylex_destroy(void);
 extern FILE* yyin;
+extern astNode* root;
 
 int main(int argc, char** argv) {
     int ret;
@@ -31,7 +33,10 @@ int main(int argc, char** argv) {
 
     ret = yyparse();
 
+    printNode(root);
+
     // Clean up.
+    freeNode(root);
     fclose(yyin);
     yylex_destroy();
 

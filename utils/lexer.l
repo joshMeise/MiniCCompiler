@@ -20,6 +20,7 @@
 
 %{
 
+#include "ast.h"
 #include "y.tab.h"
 
 int linenum = 1;
@@ -48,6 +49,7 @@ int linenum = 1;
 ">="                            { return GEQ; }
 "=="                            { return EQ; }
 [0-9]+                          { yylval.ival = atoi(yytext); return NUMBER; }
+-[0-9]+                         { yylval.ival = atoi(yytext); return NEG_NUMBER; }
 [_A-Za-z][A-Za-z0-9_]*          { yylval.sval = strdup(yytext); return IDENTIFIER; }
 [ \r\t]
 [\n]                            { linenum++; }
