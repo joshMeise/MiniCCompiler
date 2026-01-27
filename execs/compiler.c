@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
 
     ret = yyparse();
 
+    printNode(root);
+
     if (ret != 0) exit(EXIT_FAILURE);
 
     ret = semantically_analyze(root);

@@ -23,4 +23,4 @@ lex.yy.c: lexer.l y.tab.h
 	$(CXX) $(CXXFLAGS) -c $<
 
 clean:
-	rm -rf *.o y.tab.c y.tab.h lex.yy.c ../lib/libutils.a
+	rm -rf *.output *.o y.tab.c y.tab.h lex.yy.c ../lib/libutils.a

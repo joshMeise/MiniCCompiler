@@ -3,7 +3,10 @@ extern int read(void);
 int main(void) {
   int x;
   x = 12;
-  while (x > 0) x = x - 1;
+  while (x > 0) {
+      x = x - 1;
+  }
+
   if ((x == 0)) print(x);
   return 0;
 }

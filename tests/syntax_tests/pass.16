@@ -2,7 +2,7 @@ extern void print(int);
 extern int read(void);
 int main(void) {
   int x;
-  x = 16;
+  x = -    16;
   while (x > 0) x = x - 1;
   if ((x == 0)) print(x);
   return 0;

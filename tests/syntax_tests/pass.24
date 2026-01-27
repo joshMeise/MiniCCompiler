@@ -4,6 +4,10 @@ int main(void) {
   int x;
   x = 24;
   while (x > 0) x = x - 1;
-  if ((-x)) print(x);
+  if ((-x)) {
+      int d;
+      d = -read();
+      print(x);
+  }
   return 0;
 }

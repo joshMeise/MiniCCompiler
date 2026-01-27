@@ -48,6 +48,12 @@ astNode* root;
 
 %start program
 
+/* Always associate a unary mnus with the expression that immediately follows it. */
+/* Need right associativity to parse -(-a) as opposed to (--)a. */
+/* Always favor reducing a unary minus expression */
+%right UMINUS
+%nonassoc MINUS
+
 /* Match else statement with innermost if statement in dangling else case. */
 %nonassoc NOELSE
 %nonassoc ELSE
@@ -128,18 +134,14 @@ return: '(' return ')'                                              { $$ = $2; }
       | return_body                                                 { $$ = $1; }
       ;
 
-return_body: arithmetic_expr                                        { $$ = $1; }
-           | relational_expr                                        { $$ = $1; }
-           | expr_arg                                               { $$ = $1; }
+return_body: assignment_expr                                        { $$ = $1; }
            ;
 
 condition: '(' condition ')'                                        { $$ = $2; }
          | '(' condition_body ')'                                   { $$ = $2; }
          ;
 
-condition_body: relational_expr                                     { $$ = $1; }
-              | arithmetic_expr                                     { $$ = $1; }
-              | expr_arg                                            { $$ = $1; }
+condition_body: assignment_expr                                     { $$ = $1; }
               ;
 
 expr: assignment_expr                                               { $$ = $1; }
@@ -152,7 +154,7 @@ assignment_stmt: IDENTIFIER EQUALS assignment_expr                  { $$ = creat
 
 assignment_expr: arithmetic_expr                                    { $$ = $1; }
                | relational_expr                                    { $$ = $1; }
-               | expr_arg                                           { $$ = $1; }
+               | expr_arg %prec UMINUS                              { $$ = $1; }
                ;
 
 arithmetic_expr: plus_expr                                          { $$ = $1; }
@@ -198,8 +200,7 @@ eq_expr: expr_arg EQ expr_arg                                       { $$ = creat
 expr_arg: read_expr                                                 { $$ = $1; }
         | IDENTIFIER                                                { $$ = createVar($1); free($1); }
         | NUMBER                                                    { $$ = createCnst($1); }
-        | MINUS NUMBER                                              { $$ = createUExpr(createCnst($2), uminus); }
-        | MINUS IDENTIFIER                                          { $$ = createUExpr(createVar($2), uminus); free($2); }
+        | MINUS expr_arg                                            { $$ = createUExpr($2, uminus); }
         ;
 
 read_expr: READ read_arg                                            { $$ = createCall("read", $2); }

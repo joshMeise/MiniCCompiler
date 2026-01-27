@@ -2,8 +2,10 @@ extern void print(int);
 extern int read(void);
 int main(void) {
   int x;
+  int r;
+  r = 43;
   x = 65;
   while (x > 0) x = x - 1;
   if ((x == 0)) print(x);
-  return 0;
+  return r;
 }

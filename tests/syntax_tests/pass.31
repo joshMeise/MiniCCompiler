@@ -1,9 +1,15 @@
 extern void print(int);
+
 extern int read(void);
+
+
+
 int main(void) {
   int x;
   x = 31;
   while (x > 0) x = x - 1;
-  if ((x == 0)) print(x);
+
+  if ((x == read())) print(x);
+  
   return 0;
 }
