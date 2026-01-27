@@ -1,9 +1,14 @@
 /*
- * semantic_analysis.h - 
+ * semantic_analysis.h - header file for semantic analysis function
  *
  * Josh Meise
  * 01-25-2026
- * Description: 
+ * Description:
+ * - Performs semantic analysis on a MiniC program.
+ * - Ensures all variables are declared before they are used.
+ * - Ensures that variables are only declared once within each scope.
+ * - Takes the root node of an AST as input.
+ * - Outputs 0 if program is semantically sound, -1 is the tree is invalid, number of semantic errors otherwise.
  *
  */
 
