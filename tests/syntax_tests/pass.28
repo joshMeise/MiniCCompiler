@@ -1,11 +1,9 @@
 extern void print(int);
-extern int read();
-
-int main() {
-    int a;
-    a = read();
-    while (a < 28) {
-        a = a + 1;
-    }
-    return a;
+extern int read(void);
+int main(void) {
+  int x;
+  x = read();
+  while (x > 0) x = x - 1;
+  if ((x == 0)) print(x);
+  return 0;
 }

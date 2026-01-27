@@ -1,11 +1,7 @@
 extern void print(int);
-extern int read();
-
-int main() {
-    int a;
-    a = 1;
-    if (a != 2) {
-        print(a);
-    }
-    return a;
+extern int read(void);
+int main(void) {
+  int x;
+  for (x = 0; x < 3; x = x + 1) print(x);
+  return 0;
 }

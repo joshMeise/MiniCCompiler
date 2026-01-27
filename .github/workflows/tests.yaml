@@ -32,3 +32,29 @@ jobs:
       - name: Run tests
         working-directory: tests
         run: ./run_syntax_tests.sh
+
+  test-semantic-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make test script executable
+        run: chmod +x tests/run_semantics_tests.sh
+
+      - name: Build utilites
+        working-directory: utils
+        run: |
+          make clean
+          make
+
+      - name: Build test harness
+        working-directory: tests
+        run: |
+          make clean
+          make
+
+      - name: Run tests
+        working-directory: tests
+        run: ./run_semantics_tests.sh

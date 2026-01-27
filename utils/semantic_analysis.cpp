@@ -1,9 +1,14 @@
 /*
- * semantic_analysis.cpp - 
+ * semantic_analysis.cpp - perform semantic analysis on MiniC program's AST
  *
  * Josh Meise
  * 01-25-2026
- * Description: 
+ * Description:
+ * Ensures that a MiniC program is emantically sound.
+ * No use before declaration and mutiple declaration consitute sound semantics.
+ *
+ * Citations:
+ * - Used Professor Kommineni's ast.cpp file as a guideline for structure
  *
  */
 
@@ -62,11 +67,17 @@ static int analyze_stmt(astStmt* stmt) {
 
     switch(stmt->type){
         case ast_call: {
-            // No effect on symbol table consturction.
+            // If call has a parameter, perform semantic analysis incase it is a variable.
+            if (stmt->call.param != NULL) {
+                if ((rc = analyze_node(stmt->call.param)) == -1) return -1;
+                errors += rc;
+            }
             break;
         }
         case ast_ret: {
-            // No effect on symbol table construction.
+            // Perform semantic analysis on return statement.
+            if ((rc = analyze_node(stmt->ret.expr)) == -1) return -1;
+            errors += rc;
             break;
         }
         case ast_block: {
@@ -76,16 +87,14 @@ static int analyze_stmt(astStmt* stmt) {
                 errors += rc;
             }
 
-            for (string s : symbol_tables.back())
-                std::cout << s << "\n";
-            std::cout << "popping\n";
-
             // Delete block's symbol table.
             symbol_tables.pop_back();
             break;
         }
         case ast_while: {
-            // While condition has no effect on symbol table construction.
+            // Perform semantic analysis on while condition as part of outer scope.
+            if ((rc = analyze_node(stmt->whilen.cond)) == -1) return -1;
+            errors += rc;
 
             // DO analysis on while loop body.
             if ((rc = analyze_node(stmt->whilen.body)) == -1) return -1;
@@ -93,7 +102,9 @@ static int analyze_stmt(astStmt* stmt) {
             break;
         }
         case ast_if: {
-            // If condition has no effect on symbol table construction.
+            // Perform semantic analysis on if condition as part of outer scope.
+            if ((rc = analyze_node(stmt->ifn.cond)) == -1) return -1;
+            errors += rc;
 
             // Do analysis on if statemetn body.
             if ((rc = analyze_node(stmt->ifn.if_body)) == -1) return -1;
@@ -107,7 +118,11 @@ static int analyze_stmt(astStmt* stmt) {
             break;
         }
         case ast_asgn: {
-            // No effect on symbol table construction.
+            // Perform semantic analysis to ensure all variables have been declared.
+            if ((rc = analyze_node(stmt->asgn.lhs)) == -1) return -1;
+            errors += rc;
+            if ((rc = analyze_node(stmt->asgn.rhs)) == -1) return -1;
+            errors += rc;
             break;
         }
         case ast_decl: {
@@ -139,6 +154,7 @@ static int analyze_stmt(astStmt* stmt) {
 static int analyze_node(astNode* node) {
     int errors;
     int rc;
+    std::string var_name;
 
     if (node == NULL) return -1;
 
@@ -176,27 +192,41 @@ static int analyze_node(astNode* node) {
             break;
         }
         case ast_extern: {
-            // No effect on symbol table construction.
+            // No effect on semantic analysis.
             break;
         }
         case ast_var: {
-            // No effect on symbol table construction.
+            var_name = std::string(node->var.name);
+
+            // If variable does not exist in symbol table there is an error.
+            if (!identifier_exists(var_name))
+                errors += 1;
             break;
         }
         case ast_cnst: {
-            // No effect on symbol table construction.
+            // No effect on semantic analysis.
             break;
         }
         case ast_rexpr: {
-            // No effect on symbol table construction.
+            // Ensure that any variables used are declared.
+            if ((rc = analyze_node(node->rexpr.lhs)) == -1) return -1;
+            errors += rc;
+            if ((rc = analyze_node(node->rexpr.rhs)) == -1) return -1;
+            errors += rc;
             break;
         }
         case ast_bexpr: {
-            // No effect on symbol table construction.
+            // Ensure that any variables used are declared.
+            if ((rc = analyze_node(node->bexpr.lhs)) == -1) return -1;
+            errors += rc;
+            if ((rc = analyze_node(node->bexpr.rhs)) == -1) return -1;
+            errors += rc;
             break;
         }
         case ast_uexpr: {
-            // No effect on symbol table construction.
+            // Ensure that any variables used are declared.
+            if ((rc = analyze_node(node->uexpr.expr)) == -1) return -1;
+            errors += rc;
             break;
         }
         default: {
@@ -218,5 +248,12 @@ static int analyze_node(astNode* node) {
  *      - int: -1 if error, 0 if semantically sound, number of errors otherwise
  */
 int semantically_analyze(astNode* root) {
-    return analyze_node(root);
+    int ret;
+    
+    ret = analyze_node(root);
+
+    if (ret == -1) std::cerr << "Error in semantic analysis.\n";
+    else if (ret > 0) std::cerr << ret << " semantic errors found.\n";
+    
+    return ret;
 }

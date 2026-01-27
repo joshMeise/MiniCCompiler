@@ -1,17 +1,9 @@
 extern void print(int);
-extern int read();
-
-int main() {
-    int i;
-    int sum;
-    i = 0;
-    sum = 0;
-    while (i < 32) {
-        sum = sum + i;
-        if (read() > i) {
-            sum = sum + 1;
-        }
-        i = i + 1;
-    }
-    return sum;
+extern int read(void);
+int main(void) {
+  int x;
+  x = 32;
+  while (x > 0) x = x - 1;
+  if ((x == 0)) print(x);
+  return 0;
 }

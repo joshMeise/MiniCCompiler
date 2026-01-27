@@ -18,7 +18,7 @@
 #include <string.h>
 
 /* local helper functions */
-char * get_indent_str(int n){
+char* get_indent_str(int n){
     char * ret = (char *) calloc(n+1, sizeof(char));
     for (int i=0; i < n; i++)
         ret[i] = ' ';

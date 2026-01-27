@@ -54,7 +54,7 @@ astNode* root;
 }
 
 %token <ival> NUMBER NEG_NUMBER
-%token <sval> IDENTIFIER
+%token <sval> IDENTIFIER NEG_IDENTIFIER
 %token INT VOID EXTERN PRINT READ IF ELSE WHILE RETURN PLUS MINUS TIMES DIVIDE EQUALS LT GT LEQ GEQ EQ
 %type <nval> relational_expr lt_expr gt_expr leq_expr geq_expr eq_expr expr_arg read_expr arithmetic_expr plus_expr minus_expr times_expr divide_expr assignment_stmt assignment_expr expr print_expr print_arg condition_body condition return return_body return_stmt while_stmt if_stmt else_part stmt stmt_or_expr variable_dec code_block argument_body argument function read print program read_arg no_args
 %type <vval> stmts_and_exprs variable_decs code_block_body preamble
@@ -147,6 +147,7 @@ return_body: arithmetic_expr                                        { $$ = $1; }
            | NUMBER                                                 { $$ = createCnst($1); }
            | NEG_NUMBER                                             { $$ = createCnst($1); }
            | IDENTIFIER                                             { $$ = createVar($1); free($1); }
+           | NEG_IDENTIFIER                                         { $$ = createUExpr(createVar($1), uminus); free($1); }
            ;
 
 condition: '(' condition ')'                                        { $$ = $2; }
@@ -159,6 +160,7 @@ condition_body: relational_expr                                     { $$ = $1; }
               | IDENTIFIER                                          { $$ = createVar($1); free($1); }
               | NUMBER                                              { $$ = createCnst($1); }
               | NEG_NUMBER                                          { $$ = createCnst($1); }
+              | NEG_IDENTIFIER                                      { $$ = createUExpr(createVar($1), uminus); free($1); }
               ;
 
 expr: assignment_expr                                               { $$ = $1; }
@@ -175,6 +177,7 @@ assignment_expr: arithmetic_expr                                    { $$ = $1; }
                | IDENTIFIER                                         { $$ = createVar($1); free($1); }
                | NUMBER                                             { $$ = createCnst($1); }
                | NEG_NUMBER                                         { $$ = createCnst($1); }
+               | NEG_IDENTIFIER                                     { $$ = createUExpr(createVar($1), uminus); free($1); }
                ;
 
 arithmetic_expr: plus_expr                                          { $$ = $1; }

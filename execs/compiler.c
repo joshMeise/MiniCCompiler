@@ -34,14 +34,16 @@ int main(int argc, char** argv) {
 
     ret = yyparse();
 
-    printf("%d\n", semantically_analyze(root));
+    if (ret != 0) exit(EXIT_FAILURE);
+
+    ret = semantically_analyze(root);
+
+    if (ret != 0) exit(EXIT_FAILURE);
 
     // Clean up.
     freeNode(root);
     fclose(yyin);
     yylex_destroy();
 
-
-    if (ret == 0) exit(EXIT_SUCCESS);
-    else exit(EXIT_FAILURE);
+    exit(EXIT_SUCCESS);
 }

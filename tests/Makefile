@@ -1,9 +1,9 @@
 CXX=g++
-CXXFLAGS=-Wall -Wpedantic -I../utils
+CXXFLAGS=-Wall -Wpedantic -std=c++20 -I../utils
 WNO=-Wno-deprecated
 LDFLAGS=-L../lib
 LIBS=-lutils
-EXECS=test_syntax
+EXECS=test_syntax test_semantics
 
 all: $(EXECS)
 

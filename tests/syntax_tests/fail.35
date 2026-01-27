@@ -1,5 +1,7 @@
 extern void print(int);
-extern int read();
-
-int a() { return 1; }
-int b() { return 2; }
+extern int read(void);
+int main(void) {
+  int x;
+  int x x;
+  return 0;
+}

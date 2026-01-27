@@ -1,0 +1,7 @@
+extern void print(int);
+extern int read(void);
+int main(void) {
+  int x;
+  x = y;
+  return 0;
+}

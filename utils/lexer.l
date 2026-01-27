@@ -49,8 +49,9 @@ int linenum = 1;
 ">="                            { return GEQ; }
 "=="                            { return EQ; }
 [0-9]+                          { yylval.ival = atoi(yytext); return NUMBER; }
--[0-9]+                         { yylval.ival = atoi(yytext); return NEG_NUMBER; }
+-[0-9]+                     { yylval.ival = atoi(yytext); return NEG_NUMBER; }
 [_A-Za-z][A-Za-z0-9_]*          { yylval.sval = strdup(yytext); return IDENTIFIER; }
+"-"[_A-Za-z][A-Za-z0-9_]*       { yylval.sval = strdup(yytext + 1); return NEG_IDENTIFIER; }
 [ \r\t]
 [\n]                            { linenum++; }
 .                               { return yytext[0]; }
