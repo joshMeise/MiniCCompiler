@@ -9,9 +9,6 @@
  * Citations:
  * - ChatGPT for help getting rid of compiler warnings for unused functions.
  *
- * Questions:
- *
- * TODO:
  *
  */
 

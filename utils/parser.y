@@ -17,20 +17,6 @@
  * 
  * Citations:
  *
- * Questions:
- * - Can we declare and define variables on the same line?
- *      - Declarations and definitions cannot be combined.
- * - Can if statement and while loop conditions just be a single variable (i.e. not necessarily a full expression)?
- *      - Can be a single variable. Can just have a single term.
- * - Can we have void functions?
- *      - No void functions.
- * - Should we expect return to always be at the bottom of function?
- *      - No. Returns may be treated like any other statement.
- *
- * TODO:
- * - Possibly (void); maybe define rule that allows open or word "void"
- * - Check semi-olons at the edn of statements.
- *
  */
 
 %{
