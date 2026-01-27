@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ast.h>
+#include <semantic_analysis.h>
 
 extern int yyparse(void);
 extern int yylex_destroy(void);
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
 
     ret = yyparse();
 
-    printNode(root);
+    printf("%d\n", semantically_analyze(root));
 
     // Clean up.
     freeNode(root);

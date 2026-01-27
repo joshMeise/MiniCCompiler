@@ -1,5 +1,5 @@
 CXXFLAGS=-Wall -Wpedantic -std=c++20
-OFILES=ast.o y.tab.o lex.yy.o
+OFILES=ast.o y.tab.o lex.yy.o semantic_analysis.o
 CXX=g++
 LEX=lex
 YACC=yacc

@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-Wall -Wpedantic -I../utils
+CXXFLAGS=-Wall -Wpedantic -I../utils -std=c++20
 WNO=-Wno-deprecated
 LDFLAGS=-L../lib
 LIBS=-lutils

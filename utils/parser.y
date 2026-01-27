@@ -90,7 +90,7 @@ argument: '(' argument ')'                                          { $$ = $2; }
         | '(' argument_body ')'                                     { $$ = $2; }
         ;
 
-argument_body: INT IDENTIFIER                                       { $$ = createVar($2); free($2); }
+argument_body: INT IDENTIFIER                                       { $$ = createDecl($2); free($2); }
              | no_args                                              { $$ = $1; }
              ;
 
@@ -123,15 +123,15 @@ stmt: assignment_stmt ';'                                           { $$ = $1; }
     ;
 
 while_stmt: WHILE condition code_block                              { $$ = createWhile($2, $3); }
-          | WHILE condition stmt_or_expr                            { $$ = createWhile($2, $3); }
+          | WHILE condition stmt_or_expr                            { vector<astNode*>* vec = new vector<astNode*>; vec->push_back($3); $$ = createWhile($2, createBlock(vec)); }
           ;
 
 if_stmt: IF condition code_block else_part                          { $$ = createIf($2, $3, $4); }
-       | IF condition stmt_or_expr else_part                        { $$ = createIf($2, $3, $4); }
+       | IF condition stmt_or_expr else_part                        { vector<astNode*>* vec = new vector<astNode*>; vec->push_back($3); $$ = createIf($2, createBlock(vec), $4); }
        ;
 
 else_part: ELSE code_block                                          { $$ = $2; }
-         | ELSE stmt_or_expr                                        { $$ = $2; }
+         | ELSE stmt_or_expr                                        { vector<astNode*>* vec = new vector<astNode*>; vec->push_back($2); $$ = createBlock(vec); }
          | /* empty */ %prec NOELSE                                 { $$ = NULL; }
          ;
 

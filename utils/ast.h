@@ -151,7 +151,7 @@ struct ast_Stmt{
         astWhile  whilen;
         astIf     ifn;
         astDecl   decl;
-        astAsgn 	asgn;
+        astAsgn   asgn;
     };
 };
 

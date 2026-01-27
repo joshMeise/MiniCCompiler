@@ -7,6 +7,7 @@
  * Description:
  * - AST library written by Professor Vasanta Lakshmi Kommineni at Dartmouth College.
  * - Modified by Josh Meise for use in COSC 257, Winter 2026.
+ * - Changed user-defined function argument from var to decl (change in freeFunc()).
  *
  */
 
@@ -68,7 +69,7 @@ void freeFunc(astNode *node){
 
     free(node->func.name);
     if (node->func.param != NULL)
-        freeVar(node->func.param);
+        freeDecl(node->func.param);
 
     freeBlock(node->func.body);
 
@@ -550,6 +551,7 @@ void printStmt(astStmt *stmt, int n){
                 printNode(*it, n+1);
                 it++;
             }
+            printf("HERE\n");
             break;
         }
         case ast_while: {
