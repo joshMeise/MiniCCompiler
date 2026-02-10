@@ -10,6 +10,8 @@
 #pragma once
 #include <llvm-c/Core.h>
 #include <string>
+#include <unordered_map>
+#include <set>
 
 class Optimizer {
 public:
@@ -23,9 +25,16 @@ public:
 
     bool local_optimizations(void);
 
+    bool global_optimizations(void);
+
+    void print_gen(void);
+
 private:
     // Instance variables.
     LLVMModuleRef m;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen;
+
+    void compute_gen(void);
 
     bool common_sub_expr_elim(LLVMBasicBlockRef bb);
 

@@ -15,6 +15,30 @@
 #include <format>
 #include <iostream>
 #include <filesystem>
+#include <optional>
+
+/*
+ * Given a set of store instructions and an operand, checks to see if there is a store to the same location in the set.
+ * Returns first match.
+ *
+ * Args:
+ * - set: set of store instructions.
+ * - operand: store location to search for
+ *
+ * Returns:
+ * - null if no match found, first occurance of store instruction if value is found
+ */
+static std::optional<LLVMValueRef> find_instr_with_operand(std::set<LLVMValueRef>& set, LLVMValueRef operand) {
+    for (LLVMValueRef instr : set) {
+        if (LLVMGetInstructionOpcode(instr) == LLVMStore) {
+            if (operand == LLVMGetOperand(instr, 1))
+                return instr;
+        }
+        else
+            throw std::invalid_argument("Invalid argument to function.\n");
+    }
+    return std::nullopt;
+}
 
 Optimizer::Optimizer(void) {
     m = NULL;
@@ -89,6 +113,60 @@ bool Optimizer::local_optimizations(void) {
 }
 
 /*
+ * Performs global optimizations.
+ *
+ */
+bool Optimizer::global_optimizations(void) {
+    // Compute GEN set.
+    compute_gen();
+
+    return true;
+}
+
+void Optimizer::print_gen(void) {
+    for (auto& pair : gen) {
+        std::cout << "Block:\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+/*
+ * Computes GEN set for all basic blocks of a function.
+ * GEN sets take the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_gen(void) {
+    LLVMValueRef f, i;
+    LLVMBasicBlockRef bb;
+    std::optional<LLVMValueRef> instr;
+
+    // Loop thorugh each basic block and each function.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // Create an entry for this basic block.
+            gen.insert({bb, std::set<LLVMValueRef>()});
+
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                // Onlyadd store instructions to GEN set.
+                if (LLVMGetInstructionOpcode(i) == LLVMStore) {
+                    // Check if store to same operand exists in GEN set.
+                    instr = find_instr_with_operand(gen[bb], LLVMGetOperand(i, 1));
+
+                    // If an instruction with the given operand already exists in the set, replace it.
+                    if (instr.has_value()) {
+                        gen[bb].erase(instr.value());
+                        gen[bb].insert(i);
+                    }
+                    else gen[bb].insert(i);
+                }
+            }
+        }
+    }
+}
+
+/*
  * Performs common subexpression elimination.
  * If two instructions have the same opcode and operands with unmodified operands, make the later instruction point to the earlier one.
  *
@@ -114,19 +192,13 @@ bool Optimizer::common_sub_expr_elim(LLVMBasicBlockRef bb) {
     // Walk through all instructions in a basic block.
     for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
         op = LLVMGetInstructionOpcode(i);
-        LLVMDumpValue(i);
-        std::cout << "\n";
 
         if (op == LLVMLoad) {
-            std::cout << "Found load\n";
             operand = LLVMGetOperand(i, 0);
-            LLVMDumpValue(operand);
-            std::cout << "\n";
             for (j = LLVMGetNextInstruction(i); j != NULL; j = LLVMGetNextInstruction(j)) {
                 std::cout << "HI\n";
             }
-        } else if (op == LLVMAdd) {
-            std::cout << "Found add\n";
+        } else {
             operand = LLVMGetOperand(i, 0);
             LLVMDumpValue(operand);
             std::cout << "\n";
@@ -175,7 +247,7 @@ bool Optimizer::dead_code_elim(LLVMBasicBlockRef bb) {
 
             // An instruction has been removed by dead code elimination.
             changes = true;
-        } 
+        }
         // Nothing is deleted.
         else {
             prev = i;

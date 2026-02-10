@@ -14,7 +14,9 @@ int main(void) {
     std::string new_fname = std::string("test.new.ll");
     Optimizer optimizer(fname);
 
-    optimizer.local_optimizations();
+    optimizer.global_optimizations();
+
+    optimizer.print_gen();
 
     optimizer.write_to_file(new_fname);
     return 0;
