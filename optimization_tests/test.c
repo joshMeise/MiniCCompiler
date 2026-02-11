@@ -7,17 +7,9 @@ int func(int s) {
     int c;
 
     a = 10;
-    b = 32;
+    b = 20;
 
-    if (a < b)
-        c = a * b;
+    b = a;
 
-    c = a + b;
-    c = a + b;
-
-    b = c;
-
-    b = 4 + a;
-
-    return c;
+    return a;
 }

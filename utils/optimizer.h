@@ -50,13 +50,13 @@ private:
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_ra;
     std::unordered_map<LLVMBasicBlockRef, int> lut;
 
-    void compute_gen_fa(void);
-    void compute_kill_fa(void);
-    void compute_in_and_out_fa(void);
+    void compute_gen_fa(LLVMValueRef f);
+    void compute_kill_fa(LLVMValueRef f);
+    void compute_in_and_out_fa(LLVMValueRef f);
 
-    void compute_gen_ra(void);
-    void compute_kill_ra(void);
-    void compute_in_and_out_ra(void);
+    void compute_gen_ra(LLVMValueRef f);
+    void compute_kill_ra(LLVMValueRef f);
+    void compute_in_and_out_ra(LLVMValueRef f);
 
     bool common_sub_expr_elim(LLVMBasicBlockRef bb);
 
@@ -64,5 +64,5 @@ private:
 
     bool constant_folding(LLVMBasicBlockRef bb);
 
-    bool constant_propagation(void);
+    bool constant_propagation(LLVMValueRef f);
 };
