@@ -9,6 +9,9 @@ int func(int s) {
     a = 10;
     b = 32;
 
+    if (a < b)
+        c = a * b;
+
     c = a + b;
     c = a + b;
 
