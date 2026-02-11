@@ -1,4 +1,4 @@
-CXXFLAGS=-Wall -Wpedantic -std=c++20
+CXXFLAGS=-Wall -Wall -Wpedantic -std=c++20
 OFILES=ast.o y.tab.o lex.yy.o semantic_analysis.o optimizer.o
 CXX=g++
 LEX=lex

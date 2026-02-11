@@ -117,15 +117,98 @@ bool Optimizer::local_optimizations(void) {
  *
  */
 bool Optimizer::global_optimizations(void) {
-    // Compute GEN set.
-    compute_gen();
+    // Compute GEN, KILL, IN and OUT sets.
+    compute_gen_fa();
+    compute_kill_fa();
+    compute_in_and_out_fa();
+    compute_gen_ra();
+    compute_kill_ra();
+    compute_in_and_out_ra();
 
     return true;
 }
 
-void Optimizer::print_gen(void) {
-    for (auto& pair : gen) {
-        std::cout << "Block:\n";
+void Optimizer::print_gen_fa(void) {
+    std::cout << "GEN (fa) set:\n";
+    for (auto& pair : gen_fa) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_kill_fa(void) {
+    std::cout << "KILL (fa) set:\n";
+    for (auto& pair : kill_fa) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_in_fa(void) {
+    std::cout << "IN (fa) set:\n";
+    for (auto& pair : in_fa) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_out_fa(void) {
+    std::cout << "OUT (fa) set:\n";
+    for (auto& pair : out_fa) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_gen_ra(void) {
+    std::cout << "GEN (ra) set:\n";
+    for (auto& pair : gen_ra) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_kill_ra(void) {
+    std::cout << "KILL (ra) set:\n";
+    for (auto& pair : kill_ra) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_in_ra(void) {
+    std::cout << "IN (ra) set:\n";
+    for (auto& pair : in_ra) {
+        std::cout << "Block " << pair.first << ":\n";
+        for (auto& instr : pair.second) {
+            LLVMDumpValue(instr);
+            std::cout << std::endl;
+        }
+    }
+}
+
+void Optimizer::print_out_ra(void) {
+    std::cout << "OUT (ra) set:\n";
+    for (auto& pair : out_ra) {
+        std::cout << "Block " << pair.first << ":\n";
         for (auto& instr : pair.second) {
             LLVMDumpValue(instr);
             std::cout << std::endl;
@@ -134,10 +217,10 @@ void Optimizer::print_gen(void) {
 }
 
 /*
- * Computes GEN set for all basic blocks of a function.
+ * Computes GEN set for all basic blocks of a function using forward.
  * GEN sets take the form of a map from basic block references to sets of instructions.
  */
-void Optimizer::compute_gen(void) {
+void Optimizer::compute_gen_fa(void) {
     LLVMValueRef f, i;
     LLVMBasicBlockRef bb;
     std::optional<LLVMValueRef> instr;
@@ -146,24 +229,300 @@ void Optimizer::compute_gen(void) {
     for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
         for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
             // Create an entry for this basic block.
-            gen.insert({bb, std::set<LLVMValueRef>()});
+            gen_fa.insert({bb, std::set<LLVMValueRef>()});
 
             for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
                 // Onlyadd store instructions to GEN set.
                 if (LLVMGetInstructionOpcode(i) == LLVMStore) {
                     // Check if store to same operand exists in GEN set.
-                    instr = find_instr_with_operand(gen[bb], LLVMGetOperand(i, 1));
+                    instr = find_instr_with_operand(gen_fa[bb], LLVMGetOperand(i, 1));
 
                     // If an instruction with the given operand already exists in the set, replace it.
                     if (instr.has_value()) {
-                        gen[bb].erase(instr.value());
-                        gen[bb].insert(i);
+                        gen_fa[bb].erase(instr.value());
+                        gen_fa[bb].insert(i);
                     }
-                    else gen[bb].insert(i);
+                    else gen_fa[bb].insert(i);
                 }
             }
         }
     }
+}
+
+/*
+ * Computes KILL set for all basic blocks of a function using forwaard analysis.
+ * KILL set takes the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_kill_fa(void) {
+    LLVMValueRef f, i, loc;
+    LLVMBasicBlockRef bb;
+    std::set<LLVMValueRef> all_stores;
+    std::set<LLVMValueRef>::iterator it;
+
+    // Create set of all store instructions.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                if (LLVMGetInstructionOpcode(i) == LLVMStore) all_stores.insert(i);
+            }
+        }
+    }
+
+    // Loop thorugh each basic block and each function.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // Create an entry for this basic block.
+            kill_fa.insert({bb, std::set<LLVMValueRef>()});
+
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                // Only add store instructions to KILL set.
+                if (LLVMGetInstructionOpcode(i) == LLVMStore) {
+                    // Get store location.
+                    loc = LLVMGetOperand(i, 1);
+
+                    // Look for store instructuons that are kill_faed.
+                    for (it = all_stores.begin(); it != all_stores.end(); ++it) {
+                        // A store cannot kill_fa itself.
+                        if (*it != i && LLVMGetOperand(*it, 1) == loc) kill_fa[bb].insert(*it);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+ * Computes IN and OUT set for all basic blocks of a function using forward analysis.
+ * IN and OUT sets take the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_in_and_out_fa(void) {
+    LLVMValueRef f, term;
+    LLVMBasicBlockRef bb, succ;
+    std::set<LLVMBasicBlockRef>::iterator bb_it;
+    std::set<LLVMValueRef>::iterator val_it;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> preds;
+    bool change;
+    unsigned int num;
+
+    // Create empty predecessor serts for eahc block.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f))
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb))
+            preds.insert({bb, std::set<LLVMBasicBlockRef>()});
+
+    // Compute predecessor sets for each basic block.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // Get terminator for basic block.
+            term = LLVMGetBasicBlockTerminator(bb);
+
+            // Add basic block to predecessor set for each of its successors.
+            for (num = 0; num < LLVMGetNumSuccessors(term); num++) {
+                succ = LLVMGetSuccessor(term, num);
+                preds[succ].insert(bb);
+            }
+        }
+    }
+
+    // Initialize IN and OUT sets.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // IN sets start out as empty.
+            in_fa.insert({bb, std::set<LLVMValueRef>()});
+
+            // OUT set is GEN set of corresponding basic block.
+            out_fa.insert({bb, gen_fa.find(bb)->second});
+        }
+    }
+
+    // Iterate until a fixed point is reached.
+    change = true;
+    do {
+        change = false;
+        // First update IN set.
+        for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                // IN set is union of OUT sets of all predecessors.
+                for (bb_it = preds[bb].begin(); bb_it != preds[bb].end(); ++bb_it) {
+                    for (val_it = out_fa[*bb_it].begin(); val_it != out_fa[*bb_it].end(); ++val_it) {
+                        in_fa[bb].insert(*val_it);
+                    }
+                }
+            }
+        }
+
+        // Then update OUT set.
+        for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                // Out set contains GEN set of basic block.
+                for (val_it = gen_fa[bb].begin(); val_it != gen_fa[bb].end(); ++val_it) {
+                    // Check to see if an item is being added to out set.
+                    if (!out_fa[bb].contains(*val_it)) {
+                        change = true;
+                        out_fa[bb].insert(*val_it);
+                    }
+                }
+
+                // OUT set also contains union of set difference of IN set and KILL set.
+                for (val_it = in_fa[bb].begin(); val_it != in_fa[bb].end(); ++val_it) {
+                    // Ensure not in KILL set and not already in OUT set.
+                    if (!kill_fa[bb].contains(*val_it) && !out_fa[bb].contains(*val_it)) {
+                        change = true;
+                        out_fa[bb].insert(*val_it);
+                    }
+                }
+            }
+        }
+    } while (change);
+}
+
+/*
+ * Computes GEN set for all basic blocks of a function using reverse analysis.
+ * GEN sets take the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_gen_ra(void) {
+    LLVMValueRef f, i;
+    LLVMBasicBlockRef bb;
+    std::set<LLVMValueRef> stores;
+
+    // Loop thorugh each basic block and each function.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // Create set of all store locations in this basic block.
+            stores = std::set<LLVMValueRef>();
+
+            // Create an entry for this basic block.
+            gen_ra.insert({bb, std::set<LLVMValueRef>()});
+
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                // Only add load instructions for which no store instructions exist in the same basic block to GEN set.
+                if (LLVMGetInstructionOpcode(i) == LLVMLoad && !stores.contains(LLVMGetOperand(i, 0))) gen_ra[bb].insert(i);
+                // Add store instructions to set of stores.
+                else if (LLVMGetInstructionOpcode(i) == LLVMStore) stores.insert(LLVMGetOperand(i, 1));
+            }
+        }
+    }
+}
+
+/*
+ * Computes KILL set for all basic blocks of a function using reverse analysis.
+ * KILL set takes the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_kill_ra(void) {
+    LLVMValueRef f, i, loc;
+    LLVMBasicBlockRef bb;
+    std::set<LLVMValueRef> all_loads;
+    std::set<LLVMValueRef>::iterator it;
+
+    // Create set of all loads instructions in program.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                if (LLVMGetInstructionOpcode(i) == LLVMLoad) all_loads.insert(i);
+            }
+        }
+    }
+
+    // Loop thorugh each basic block and each function.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // Create an entry for this basic block.
+            kill_ra.insert({bb, std::set<LLVMValueRef>()});
+
+            for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+                // Only add store instructions to KILL set.
+                if (LLVMGetInstructionOpcode(i) == LLVMStore) {
+                    // Get store location.
+                    loc = LLVMGetOperand(i, 1);
+
+                    // Look for load instructuons that are killed by this store.
+                    for (it = all_loads.begin(); it != all_loads.end(); ++it) {
+                        if (LLVMGetOperand(*it, 0) == loc) kill_ra[bb].insert(*it);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+ * Computes IN and OUT set for all basic blocks of a function using reverse analysis.
+ * IN and OUT sets take the form of a map from basic block references to sets of instructions.
+ */
+void Optimizer::compute_in_and_out_ra(void) {
+    LLVMValueRef f, term;
+    LLVMBasicBlockRef bb, succ;
+    std::set<LLVMBasicBlockRef>::iterator bb_it;
+    std::set<LLVMValueRef>::iterator val_it;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> succs;
+    bool change;
+    unsigned int num;
+
+    // Compute predecessor sets for each basic block.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            succs.insert({bb, std::set<LLVMBasicBlockRef>()});
+
+            // Get terminator for basic block.
+            term = LLVMGetBasicBlockTerminator(bb);
+
+            // Add basic block to predecessor set for each of its successors.
+            for (num = 0; num < LLVMGetNumSuccessors(term); num++) {
+                succ = LLVMGetSuccessor(term, num);
+                succs[bb].insert(succ);
+            }
+        }
+    }
+
+    // Initialize IN and OUT sets.
+    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+            // OUT sets start out as empty.
+            out_ra.insert({bb, std::set<LLVMValueRef>()});
+
+            // IN set is GEN set of corresponding basic block.
+            in_ra.insert({bb, gen_ra.find(bb)->second});
+        }
+    }
+
+    // Iterate until a fixed point is reached.
+    change = true;
+    do {
+        change = false;
+        // First update OUT set.
+        for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                // OUT set is union of IN sets of all successors.
+                for (bb_it = succs[bb].begin(); bb_it != succs[bb].end(); ++bb_it) {
+                    for (val_it = in_ra[*bb_it].begin(); val_it != in_ra[*bb_it].end(); ++val_it) {
+                        out_ra[bb].insert(*val_it);
+                    }
+                }
+            }
+        }
+
+        // Then update IN set.
+        for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                // IN set contains GEN set of basic block.
+                for (val_it = gen_ra[bb].begin(); val_it != gen_ra[bb].end(); ++val_it) {
+                    // Check to see if an item is being added to out set.
+                    if (!in_ra[bb].contains(*val_it)) {
+                        change = true;
+                        in_ra[bb].insert(*val_it);
+                    }
+                }
+
+                // IN set also contains union of set difference of OUT set and KILL set.
+                for (val_it = out_ra[bb].begin(); val_it != out_ra[bb].end(); ++val_it) {
+                    // Ensure not in KILL set and not already in IN set.
+                    if (!kill_ra[bb].contains(*val_it) && !in_ra[bb].contains(*val_it)) {
+                        change = true;
+                        in_ra[bb].insert(*val_it);
+                    }
+                }
+            }
+        }
+    } while (change);
 }
 
 /*

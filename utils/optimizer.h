@@ -27,14 +27,35 @@ public:
 
     bool global_optimizations(void);
 
-    void print_gen(void);
+    void print_gen_fa(void);
+    void print_kill_fa(void);
+    void print_in_fa(void);
+    void print_out_fa(void);
+
+    void print_gen_ra(void);
+    void print_kill_ra(void);
+    void print_in_ra(void);
+    void print_out_ra(void);
 
 private:
     // Instance variables.
     LLVMModuleRef m;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> kill_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen_ra;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> kill_ra;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in_ra;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_ra;
 
-    void compute_gen(void);
+    void compute_gen_fa(void);
+    void compute_kill_fa(void);
+    void compute_in_and_out_fa(void);
+
+    void compute_gen_ra(void);
+    void compute_kill_ra(void);
+    void compute_in_and_out_ra(void);
 
     bool common_sub_expr_elim(LLVMBasicBlockRef bb);
 
