@@ -23,9 +23,7 @@ public:
 
     void write_to_file(std::string& fname);
 
-    bool local_optimizations(void);
-
-    bool global_optimizations(void);
+    void optimize(void);
 
     void print_gen_fa(void);
     void print_kill_fa(void);

@@ -81,65 +81,80 @@ void Optimizer::write_to_file(std::string& fname) {
 }
 
 /*
- * Walks through all all basic blocks and performs local optimizations.
+ * Performs all optimizations on program
  * Optimizations include:
  * - Common subexpression elimination
+ * - Dead code eliminiation
+ * - Constant folding
+ * - Constant propagation
  *
- * Returns:
- * - bool: true is any changes, false if no changes
  */
-bool Optimizer::local_optimizations(void) {
+void Optimizer::optimize(void) {
     LLVMValueRef f;
     LLVMBasicBlockRef bb;
-    bool sec, dce, cf;
+    bool sec, dce, cf, cp, changes;
+    int i;
 
-    sec = dce = cf = true;
+    i = 0;
 
     // Walk through all basic blocks in each function.
-    while (sec) {
+    do {
+        std::cout << i++ << std::endl;
+        fflush(stdout);
+        changes = false;
         for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
             for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
                 sec = common_sub_expr_elim(bb);
-                //dce = dead_code_elim(bb);
-                //cf = constant_folding(bb);
+                dce = dead_code_elim(bb);
+                cf = constant_folding(bb);
+
+                if (sec || dce || cf) changes = true;
             }
+
+            // Compute relevant sets prior to constant propagation.
+            compute_gen_fa(f);
+            compute_kill_fa(f);
+            compute_in_and_out_fa(f);
+            compute_gen_ra(f);
+            compute_kill_ra(f);
+            compute_in_and_out_ra(f);
+
+            // Perform constant propagation.
+            cp = constant_propagation(f);
+
+            if (cp) changes = true;
         }
-    }
-
-    if (sec)
-        return true;
-    else
-        return false;
+    } while (changes);
 }
 
-/*
- * Performs global optimizations.
- *
- */
-bool Optimizer::global_optimizations(void) {
-    LLVMValueRef f;
-    LLVMBasicBlockRef bb;
-    int i;
-
-    // Compute GEN, KILL, IN and OUT sets.
-    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
-        // Map basic blocks to integer values.
-        i = 0;
-        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) lut.insert({bb, i++});
-
-        compute_gen_fa(f);
-        compute_kill_fa(f);
-        compute_in_and_out_fa(f);
-        compute_gen_ra(f);
-        compute_kill_ra(f);
-        compute_in_and_out_ra(f);
-
-        // Constant propagation.
-        constant_propagation(f);
-    }
-
-    return true;
-}
+///*
+// * Performs global optimizations.
+// *
+// */
+//bool Optimizer::global_optimizations(void) {
+//    LLVMValueRef f;
+//    LLVMBasicBlockRef bb;
+//    int i;
+//
+//    // Compute GEN, KILL, IN and OUT sets.
+//    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+//        // Map basic blocks to integer values.
+//        i = 0;
+//        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) lut.insert({bb, i++});
+//
+//        compute_gen_fa(f);
+//        compute_kill_fa(f);
+//        compute_in_and_out_fa(f);
+//        compute_gen_ra(f);
+//        compute_kill_ra(f);
+//        compute_in_and_out_ra(f);
+//
+//        // Constant propagation.
+//        constant_propagation(f);
+//    }
+//
+//    return true;
+//}
 
 void Optimizer::print_gen_fa(void) {
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
@@ -266,7 +281,12 @@ void Optimizer::compute_gen_fa(LLVMValueRef f) {
     std::set<LLVMValueRef> instrs;
     std::set<LLVMValueRef>::iterator set_it;
 
-    // Loop thorugh each basic block and each function.
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
+   // Loop thorugh each basic block and each function.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         // Create an entry for this basic block.
         gen_fa.insert({bb, std::set<LLVMValueRef>()});
@@ -301,7 +321,12 @@ void Optimizer::compute_kill_fa(LLVMValueRef f) {
     std::set<LLVMValueRef> all_stores;
     std::set<LLVMValueRef>::iterator it;
 
-    // Create set of all store instructions.
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
+   // Create set of all store instructions.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
             if (LLVMGetInstructionOpcode(i) == LLVMStore) all_stores.insert(i);
@@ -345,7 +370,12 @@ void Optimizer::compute_in_and_out_fa(LLVMValueRef f) {
     bool change;
     unsigned int num;
 
-    // Create empty predecessor serts for eahc block.
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
+   // Create empty predecessor serts for eahc block.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb))
         preds.insert({bb, std::set<LLVMBasicBlockRef>()});
 
@@ -419,6 +449,11 @@ void Optimizer::compute_gen_ra(LLVMValueRef f) {
     LLVMBasicBlockRef bb;
     std::set<LLVMValueRef> stores;
 
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
     // Loop thorugh each basic block and each function.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         // Create set of all store locations in this basic block.
@@ -449,7 +484,12 @@ void Optimizer::compute_kill_ra(LLVMValueRef f) {
     std::set<LLVMValueRef> all_loads;
     std::set<LLVMValueRef>::iterator it;
 
-    // Create set of all loads instructions in program.
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
+   // Create set of all loads instructions in program.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
             if (LLVMGetInstructionOpcode(i) == LLVMLoad) all_loads.insert(i);
@@ -493,7 +533,12 @@ void Optimizer::compute_in_and_out_ra(LLVMValueRef f) {
     bool change;
     unsigned int num;
 
-    // Compute predecessor sets for each basic block.
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return;
+    }
+
+   // Compute predecessor sets for each basic block.
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         succs.insert({bb, std::set<LLVMBasicBlockRef>()});
 
@@ -572,6 +617,11 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
     std::set<LLVMValueRef> deletions, stores, killed;
     int val, j;
 
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return false;
+    }
+
     // Initialize R[B] = IN[B].
     for (map_it = in_fa.begin(); map_it != in_ra.end(); ++map_it)
         r.insert({map_it->first, map_it->second});
@@ -608,6 +658,7 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
                 if (same_val && !stores.empty()) {
                     LLVMReplaceAllUsesWith(i, LLVMConstInt(LLVMInt32Type() , val, true));
                     deletions.insert(i);
+                    changes = true;
                 }
             }
         }
