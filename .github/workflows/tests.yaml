@@ -17,6 +17,15 @@ jobs:
       - name: Make test script executable
         run: chmod +x tests/run_syntax_tests.sh
 
+      - name: Install LLVM 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget software-properties-common gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 17
+          sudo apt-get install -y llvm-17 llvm-17-dev clang-17
+
       - name: Build lexer and parser
         working-directory: utils
         run: |
@@ -42,6 +51,15 @@ jobs:
 
       - name: Make test script executable
         run: chmod +x tests/run_semantics_tests.sh
+
+      - name: Install LLVM 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget software-properties-common gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 17
+          sudo apt-get install -y llvm-17 llvm-17-dev clang-17
 
       - name: Build utilites
         working-directory: utils
