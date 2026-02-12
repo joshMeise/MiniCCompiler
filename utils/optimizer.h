@@ -1,9 +1,15 @@
 /*
- * optimizer.h - 
+ * optimizer.h - optimizer for MiniC program
  *
  * Josh Meise
  * 02-07-2026
- * Description: 
+ * Description:
+ * Contains functions to perform:
+ * - common subexpression elimination
+ * - dead code elimination
+ * - constant folding
+ * - constants propagation
+ * - live variable analysis
  *
  */
 
@@ -24,16 +30,6 @@ public:
     void write_to_file(std::string& fname);
 
     void optimize(void);
-
-    void print_gen_fa(void);
-    void print_kill_fa(void);
-    void print_in_fa(void);
-    void print_out_fa(void);
-
-    void print_gen_ra(void);
-    void print_kill_ra(void);
-    void print_in_ra(void);
-    void print_out_ra(void);
 
 private:
     // Instance variables.
@@ -63,4 +59,15 @@ private:
     bool constant_folding(LLVMBasicBlockRef bb);
 
     bool constant_propagation(LLVMValueRef f);
+
+    void print_gen_fa(void);
+    void print_kill_fa(void);
+    void print_in_fa(void);
+    void print_out_fa(void);
+
+    void print_gen_ra(void);
+    void print_kill_ra(void);
+    void print_in_ra(void);
+    void print_out_ra(void);
+
 };
