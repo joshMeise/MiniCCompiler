@@ -158,10 +158,12 @@ static std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LL
     std::set<LLVMBasicBlockRef>::iterator bb_it;
     std::set<LLVMValueRef>::iterator val_it;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> preds;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> old_out, in_fa, out_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> old_out;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
     bool change;
     unsigned int num;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in_fa;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_fa;
 
     if (f == NULL) {
         std::cerr << "Invalid argument to function.\n";
@@ -176,6 +178,7 @@ static std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LL
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         // Get terminator for basic block.
         term = LLVMGetBasicBlockTerminator(bb);
+
         // Add basic block to predecessor set for each of its successors.
         for (num = 0; num < LLVMGetNumSuccessors(term); num++) {
             succ = LLVMGetSuccessor(term, num);
@@ -333,20 +336,20 @@ static std::optional<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef
  * Returns:
  * - Pair of computed in and out sets, nullopt if failure.
  */
-static std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>>> compute_in_and_out_ra(LLVMValueRef f, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& gen_ra, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& kill_ra) {
+static std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>>> compute_in_and_out_ra(LLVMValueRef f) {
     LLVMValueRef term;
     LLVMBasicBlockRef bb, succ;
     std::set<LLVMBasicBlockRef>::iterator bb_it;
     std::set<LLVMValueRef>::iterator val_it;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMBasicBlockRef>> succs;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> old_in, in_ra, out_ra;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> old_in;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
     bool change;
     unsigned int num;
 
     if (f == NULL) {
         std::cerr << "Invalid argument to function.\n";
-        return std::nullopt;
+        return;
     }
 
    // Compute successor sets for each basic block.
@@ -409,8 +412,6 @@ static std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LL
         }
 
     } while (change);
-
-    return std::make_pair(in_ra, out_ra);
 }
 
 
@@ -512,6 +513,10 @@ void Optimizer::optimize(void) {
                 if (sec || dce || cf) changes = true;
             }
 
+            compute_gen_ra(f);
+            compute_kill_ra(f);
+            compute_in_and_out_ra(f);
+
             // Perform constant propagation.
             cp = constant_propagation(f);
 
@@ -520,23 +525,147 @@ void Optimizer::optimize(void) {
     } while (changes);
 }
 
-/*
- * Prints out all instructions in each basic block of all sets.
- */
-void Optimizer::print_set(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& print_set) {
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
-    std::set<LLVMValueRef>::iterator set_it;
-
-    for (map_it = print_set.begin(); map_it != print_set.end(); ++map_it) {
-        std::cout << "Block " << map_it->first << ":\n";
-        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
-            LLVMDumpValue(*set_it);
-            std::cout << std::endl;
-        }
-    }
-    std::cout << std::endl;
-}
-
+///*
+// * Performs global optimizations.
+// *
+// */
+//bool Optimizer::global_optimizations(void) {
+//    LLVMValueRef f;
+//    LLVMBasicBlockRef bb;
+//    int i;
+//
+//    // Compute GEN, KILL, IN and OUT sets.
+//    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+//        // Map basic blocks to integer values.
+//        i = 0;
+//        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) lut.insert({bb, i++});
+//
+//        compute_gen_fa(f);
+//        compute_kill_fa(f);
+//        compute_in_and_out_fa(f);
+//        compute_gen_ra(f);
+//        compute_kill_ra(f);
+//        compute_in_and_out_ra(f);
+//
+//        // Constant propagation.
+//        constant_propagation(f);
+//    }
+//
+//    return true;
+//}
+//
+//void Optimizer::print_gen_fa(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "GEN (fa) set:\n";
+//    for (map_it = gen_fa.begin(); map_it != gen_fa.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_kill_fa(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "KILL (fa) set:\n";
+//    for (map_it = kill_fa.begin(); map_it != kill_fa.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_out_fa(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "OUT (fa) set:\n";
+//    for (map_it = out_fa.begin(); map_it != out_fa.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_in_fa(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "IN (fa) set:\n";
+//    for (map_it = in_fa.begin(); map_it != in_fa.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_gen_ra(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "GEN (ra) set:\n";
+//    for (map_it = gen_ra.begin(); map_it != gen_ra.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_kill_ra(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "KILL (ra) set:\n";
+//    for (map_it = kill_ra.begin(); map_it != kill_ra.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_out_ra(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "OUT (ra) set:\n";
+//    for (map_it = out_ra.begin(); map_it != out_ra.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
+//void Optimizer::print_in_ra(void) {
+//    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+//    std::set<LLVMValueRef>::iterator set_it;
+//
+//    std::cout << "IN (ra) set:\n";
+//    for (map_it = in_ra.begin(); map_it != in_ra.end(); ++map_it) {
+//        std::cout << "Block " << lut[map_it->first] << ":\n";
+//        for (set_it = map_it->second.begin(); set_it != map_it->second.end(); ++set_it) {
+//            LLVMDumpValue(*set_it);
+//            std::cout << std::endl;
+//        }
+//    }
+//}
+//
 /*
  * Performs constant propagation.
  * Replaces uses of constant load instructions with a constant.
@@ -580,7 +709,7 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
     }
 
     // Initialize R[B] = IN[B].
-    for (map_it = in_fa.begin(); map_it != in_fa.end(); ++map_it)
+    for (map_it = in_fa.begin(); map_it != in_ra.end(); ++map_it)
         r.insert({map_it->first, map_it->second});
 
     changes = false;
@@ -707,8 +836,8 @@ bool Optimizer::dead_code_elim(LLVMBasicBlockRef bb) {
     prev = NULL;
 
     for (i = LLVMGetFirstInstruction(bb); i != NULL; i = next) {
-        // Instruction is deleted if not used, not a store, alloc or not a terminator.
-        if (LLVMGetFirstUse(i) == NULL && LLVMGetInstructionOpcode(i) != LLVMStore && LLVMGetInstructionOpcode(i) != LLVMAlloca && !LLVMIsATerminatorInst(i)) {
+        // Instruction is deleted.
+        if (LLVMGetFirstUse(i) == NULL && !(LLVMGetInstructionOpcode(i) == LLVMStore || LLVMGetInstructionOpcode(i) == LLVMRet)) {
             // Remove instruction.
             LLVMInstructionEraseFromParent(i);
 

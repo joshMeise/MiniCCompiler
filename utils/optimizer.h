@@ -34,23 +34,6 @@ public:
 private:
     // Instance variables.
     LLVMModuleRef m;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen_fa;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> kill_fa;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in_fa;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_fa;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen_ra;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> kill_ra;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> in_ra;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> out_ra;
-    std::unordered_map<LLVMBasicBlockRef, int> lut;
-
-    void compute_gen_fa(LLVMValueRef f);
-    void compute_kill_fa(LLVMValueRef f);
-    void compute_in_and_out_fa(LLVMValueRef f);
-
-    void compute_gen_ra(LLVMValueRef f);
-    void compute_kill_ra(LLVMValueRef f);
-    void compute_in_and_out_ra(LLVMValueRef f);
 
     bool common_sub_expr_elim(LLVMBasicBlockRef bb);
 
@@ -60,14 +43,5 @@ private:
 
     bool constant_propagation(LLVMValueRef f);
 
-    void print_gen_fa(void);
-    void print_kill_fa(void);
-    void print_in_fa(void);
-    void print_out_fa(void);
-
-    void print_gen_ra(void);
-    void print_kill_ra(void);
-    void print_in_ra(void);
-    void print_out_ra(void);
-
+    void print_set(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& print_set);
 };

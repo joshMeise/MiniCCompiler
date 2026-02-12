@@ -7,13 +7,14 @@ int func(int s) {
     int c;
     int d;
 
-    a = 10;
-    b = 20;
+    a = s;
+    b = 10;
+    c = b;
 
-    c = a + b;
-    c = a + b;
+    if (s < b) {
+        d = c;
+    }
 
-    b = a;
+    return c;
 
-    return a;
 }
