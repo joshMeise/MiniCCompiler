@@ -93,14 +93,16 @@ bool Optimizer::local_optimizations(void) {
     LLVMBasicBlockRef bb;
     bool sec, dce, cf;
 
-    sec = dce = cf = false;
+    sec = dce = cf = true;
 
     // Walk through all basic blocks in each function.
-    for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
-        for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
-            //sec = common_sub_expr_elim(bb);
-            dce = dead_code_elim(bb);
-            cf = constant_folding(bb);
+    while (sec) {
+        for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                sec = common_sub_expr_elim(bb);
+                //dce = dead_code_elim(bb);
+                //cf = constant_folding(bb);
+            }
         }
     }
 
@@ -628,9 +630,10 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
  * - bool: true if any changes, false otherwise
  */
 bool Optimizer::common_sub_expr_elim(LLVMBasicBlockRef bb) {
-    LLVMValueRef i, j, operand;
-    LLVMOpcode op;
-    bool changes;
+    LLVMValueRef i, j;
+    LLVMOpcode op_i, op_j;
+    bool changes, store_found, same;
+    int k;
 
     // Ensure block exists.
     if (bb == NULL) {
@@ -642,20 +645,32 @@ bool Optimizer::common_sub_expr_elim(LLVMBasicBlockRef bb) {
 
     // Walk through all instructions in a basic block.
     for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
-        op = LLVMGetInstructionOpcode(i);
+        // Do not eliminate all kinds of instructions.
+        if (LLVMGetInstructionOpcode(i) != LLVMCall && LLVMGetInstructionOpcode(i) != LLVMStore && !LLVMIsATerminatorInst(i) && LLVMGetInstructionOpcode(i) != LLVMAlloca) {
+            store_found = false;
+            for (j = LLVMGetNextInstruction(i); j != NULL && !store_found; j = LLVMGetNextInstruction(j)) {
+                // Make sure that j has uses.
+                if (LLVMGetFirstUse(j) != NULL) {
+                    op_i = LLVMGetInstructionOpcode(i);
+                    op_j = LLVMGetInstructionOpcode(j);
 
-        if (op == LLVMLoad) {
-            operand = LLVMGetOperand(i, 0);
-            for (j = LLVMGetNextInstruction(i); j != NULL; j = LLVMGetNextInstruction(j)) {
-                std::cout << "HI\n";
+                    // There may be no store instruction to the same location as a load instruction.
+                    if (op_i == LLVMLoad && op_j == LLVMStore && LLVMGetOperand(i, 0) == LLVMGetOperand(j, 1)) store_found = true;
+                    else if (op_i == op_j) {
+                        // All operands should be the same.
+                        same = true;
+                        for (k = 0; k < LLVMGetNumOperands(i); k++)
+                            if (LLVMGetOperand(i, k) != LLVMGetOperand(j, k))
+                                same = false;
+
+                        if (same) {
+                            // Replace uses of j with i.
+                            LLVMReplaceAllUsesWith(j, i);
+                            changes = true;
+                        }
+                    }
+                }
             }
-        } else {
-            operand = LLVMGetOperand(i, 0);
-            LLVMDumpValue(operand);
-            std::cout << "\n";
-            operand = LLVMGetOperand(i, 1);
-            LLVMDumpValue(operand);
-            std::cout << "\n";
         }
     }
 
@@ -679,7 +694,7 @@ bool Optimizer::dead_code_elim(LLVMBasicBlockRef bb) {
 
     // Ensure block exists.
     if (bb == NULL) {
-        std::cerr << "Invalid argument to common subexpression elimination function.\n";
+        std::cerr << "Invalid argument to dead code elimination function.\n";
         return false;
     }
 

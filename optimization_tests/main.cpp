@@ -14,7 +14,7 @@ int main(void) {
     std::string new_fname = std::string("test.new.ll");
     Optimizer optimizer(fname);
 
-    optimizer.global_optimizations();
+    optimizer.local_optimizations();
 
 //    optimizer.print_gen_fa();
 //    optimizer.print_kill_fa();
