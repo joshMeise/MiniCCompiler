@@ -3,7 +3,7 @@
 MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
 
 ## Note to Grader:
-Please see the Assignment 2 branch for submission.
+Please see the assignment_2 branch for submission. The README in this repository will contain the algorithm for live code analysis.
 
 I have not yet added a call to my optimizer to the main executable. I will do so once I have completed the AST -> LLVM conversion.
 
