@@ -498,7 +498,7 @@ void Optimizer::write_to_file(std::string& fname) {
 void Optimizer::optimize(void) {
     LLVMValueRef f;
     LLVMBasicBlockRef bb;
-    bool sec, dce, cf, cp, changes;
+    bool sec, dce, cf, cp, changes, inner_changes, lva;
 
     // Walk through all basic blocks in each function.
     do {
@@ -507,15 +507,29 @@ void Optimizer::optimize(void) {
             for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
                 sec = common_sub_expr_elim(bb);
                 dce = dead_code_elim(bb);
-                cf = constant_folding(bb);
 
-                if (sec || dce || cf) changes = true;
+                if (sec || dce) changes = true;
             }
 
-            // Perform constant propagation.
-            cp = constant_propagation(f);
+            do {
+                inner_changes = false;
+                // Perform constant propagation.
+                cp = constant_propagation(f);
 
-            if (cp) changes = true;
+                if (cp) inner_changes = true;
+
+                // Perform constant folding.
+                for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+                    cf = constant_folding(bb);
+
+                    if (cf) inner_changes = true;
+                }
+            } while (inner_changes);
+
+            // Perform live variable analysis.
+            lva = live_variable_analysis(f);
+
+            if (lva) changes = true;
         }
     } while (changes);
 }
@@ -624,6 +638,51 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
     // Delete all marked load instructions.
     for (set_it = deletions.begin(); set_it != deletions.end(); ++set_it)
         LLVMInstructionEraseFromParent(*set_it);
+
+    return changes;
+}
+
+/*
+ * Performs live variable analysis.
+ * Uses sets computed with reverse analysis.
+ * Deletes all redundant store instructions.
+ *
+ * Args:
+ * - f (LLVMValueRef): function on which to perform optimizations
+ *
+ * Returns:
+ * - True is changes to LLVM module, false otherwise
+ */
+bool Optimizer::live_variable_analysis(LLVMValueRef f) {
+    LLVMValueRef i, operand;
+    LLVMBasicBlockRef bb;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> r, gen_ra, kill_ra, in_ra, out_ra;
+    std::optional<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>> opt_map;
+    std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>>> opt_pair;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
+    std::set<LLVMValueRef>::iterator set_it;
+    bool changes, same_val;
+    std::set<LLVMValueRef> deletions, loads, killed;
+    int val, j;
+
+    if (f == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return false;
+    }
+
+    // Compute relevant sets.
+    opt_map = compute_gen_ra(f);
+    if (!opt_map.has_value()) return false;
+    else gen_ra = opt_map.value();
+    opt_map = compute_kill_ra(f);
+    if (!opt_map.has_value()) return false;
+    else kill_ra = opt_map.value();
+    opt_pair = compute_in_and_out_ra(f, gen_ra, kill_ra);
+    if (!opt_pair.has_value()) return false;
+    else {
+        in_ra = opt_pair.value().first;
+        out_ra = opt_pair.value().second;
+    }
 
     return changes;
 }
@@ -743,6 +802,8 @@ bool Optimizer::constant_folding(LLVMBasicBlockRef bb) {
     LLVMValueRef i, lhs, rhs, cnst;
     LLVMOpcode op;
     bool changes;
+    std::set<LLVMValueRef>::iterator set_it;
+    std::set<LLVMValueRef> deletions;
 
     // Ensure block exists.
     if (bb == NULL) {
@@ -779,9 +840,18 @@ bool Optimizer::constant_folding(LLVMBasicBlockRef bb) {
                 }
                 // Replace uses of constant add instructions.
                 LLVMReplaceAllUsesWith(i, cnst);
+
+                // Mark instruction to be deleted.
+                deletions.insert(i);
+
                 changes = true;
             }
         }
     }
+
+    // Delete all marked instructions.
+    for (set_it = deletions.begin(); set_it != deletions.end(); ++set_it)
+        LLVMInstructionEraseFromParent(*set_it);
+
     return changes;
 }

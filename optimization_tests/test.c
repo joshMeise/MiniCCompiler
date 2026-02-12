@@ -12,9 +12,10 @@ int func(int s) {
     c = b;
 
     if (s < b) {
-        d = c;
+        d = c + b;
+        b = d + c;
     }
 
-    return c;
+    return b;
 
 }

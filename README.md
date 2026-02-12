@@ -9,6 +9,37 @@ I have not yet added a call to my optimizer to the main executable. I will do so
 
 I have an executable for the optimizer in the **tests/** directory. This takes as input an unoptimized `.ll` file and outputs an optimized `.ll` file.
 
+## Live Variable Analysis
+
+### Computing GEN sets:
+- For each basic block, B:
+    - Create an empty GEN set, G
+    - Create empty set to hold all stores, S
+    - For each instruction, I:
+        - If I is a store instruction, add I to S
+        - If I is a load instruction and I does not load from a location to which an instruction in S stores, add I to G
+
+### Computing KILL sets:
+- Create a set of all loads in the function, L
+- For each basic block, B:
+    - Create an empty KILL set, K
+    - For each instruction, I:
+        - If I is a store instruction, add all loads from L to same location as I to K
+
+### Computing IN and OUT sets:
+- For each basic block, B
+    - Initialize IN[B] to GEN[B]
+    - Initialize OUT[B] to empty set
+- change = true
+- while (change) do:
+    - change = false
+    - For each basic block, B:
+        - OUT[B] = union of IN sets of all successors of B
+    - OLD_IN = IN
+    - For each basic block, B:
+        - IN[B] = union of GEN[B] and set difference of OUT[B] and KILL[B]
+    - if OLD_IN != IN, change = true
+
 ## Usage
 
 To run the compiler:

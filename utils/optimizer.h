@@ -43,5 +43,7 @@ private:
 
     bool constant_propagation(LLVMValueRef f);
 
+    bool live_variable_analysis(LLVMValueRef f);
+
     void print_set(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& print_set);
 };
