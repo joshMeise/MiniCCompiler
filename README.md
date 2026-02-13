@@ -3,7 +3,7 @@
 MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
 
 ## Note to Grader:
-Please see the assignment_2 branch for submission. The README in this repository will contain the algorithm for live code analysis.
+Please see the assignment_2 branch for submission. The README in this contains the algorithm for live code analysis.
 
 I have not yet added a call to my optimizer to the main executable. I will do so once I have completed the AST -> LLVM conversion.
 
@@ -39,6 +39,18 @@ I have an executable for the optimizer in the **tests/** directory. This takes a
     - For each basic block, B:
         - IN[B] = union of GEN[B] and set difference of OUT[B] and KILL[B]
     - if OLD_IN != IN, change = true
+
+### Store elimination:
+- For each basic block, B:
+    - Compute set of all loads, L
+- For each basic block, B:
+    - For each instruction, I:
+    - If I is a load:
+        - Remove I from L
+    - If I is a store:
+        - If there are no loads in L which loads from the location that I stores to and there are no loads in OUT[B] that load from the same location that I stores to:
+            - Mark I to be deleted
+- Delete all marked instructions
 
 ## Usage
 

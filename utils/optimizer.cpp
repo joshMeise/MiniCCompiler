@@ -24,23 +24,26 @@
 #include <optional>
 
 /*
- * Given a set of store instructions and an operand, checks to see if there are stores to the same location in the set.
+ * Given a set of load or storeinstructions and an operand, checks to see if there are loads or stores to the same location in the set.
  *
  * Args:
- * - set: set of store instructions.
- * - operand: store location to search for
+ * - set: set of load or store instructions.
+ * - operand: location to search for
  *
  * Returns:
- * - Set of store instructions to same location as operand
+ * - Set of instructions to same location as operand
  */
 static std::set<LLVMValueRef> find_instrs_with_operand(std::set<LLVMValueRef>& set, LLVMValueRef operand) {
     std::set<LLVMValueRef>::iterator set_it;
     std::set<LLVMValueRef> matches;
 
-    for (set_it = set.begin(); set_it != set.end(); ++set_it)
-        if (LLVMGetInstructionOpcode(*set_it) == LLVMStore)
-            if (operand == LLVMGetOperand(*set_it, 1))
-                matches.insert(*set_it);
+    for (set_it = set.begin(); set_it != set.end(); ++set_it) {
+        if (LLVMGetInstructionOpcode(*set_it) == LLVMStore) {
+            if (operand == LLVMGetOperand(*set_it, 1)) matches.insert(*set_it);
+        } else if (LLVMGetInstructionOpcode(*set_it) == LLVMLoad) {
+            if (operand == LLVMGetOperand(*set_it, 0)) matches.insert(*set_it);
+        }
+    }
 
     return matches;
 }
@@ -500,14 +503,16 @@ void Optimizer::optimize(void) {
     LLVMBasicBlockRef bb;
     bool sec, dce, cf, cp, changes, inner_changes, lva;
 
+
+
     // Walk through all basic blocks in each function.
     do {
         changes = false;
         for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
+            // Perform local optimizations.
             for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
                 sec = common_sub_expr_elim(bb);
                 dce = dead_code_elim(bb);
-
                 if (sec || dce) changes = true;
             }
 
@@ -521,17 +526,17 @@ void Optimizer::optimize(void) {
                 // Perform constant folding.
                 for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
                     cf = constant_folding(bb);
-
                     if (cf) inner_changes = true;
                 }
             } while (inner_changes);
 
             // Perform live variable analysis.
-            lva = live_variable_analysis(f);
-
+            lva = live_variable_analysis(LLVMGetFirstFunction(m));
             if (lva) changes = true;
         }
     } while (changes);
+
+
 }
 
 /*
@@ -654,16 +659,15 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
  * - True is changes to LLVM module, false otherwise
  */
 bool Optimizer::live_variable_analysis(LLVMValueRef f) {
-    LLVMValueRef i, operand;
+    LLVMValueRef i;
     LLVMBasicBlockRef bb;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> r, gen_ra, kill_ra, in_ra, out_ra;
     std::optional<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>> opt_map;
     std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>>> opt_pair;
     std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
     std::set<LLVMValueRef>::iterator set_it;
-    bool changes, same_val;
-    std::set<LLVMValueRef> deletions, loads, killed;
-    int val, j;
+    bool changes;
+    std::set<LLVMValueRef> deletions, loads, in_out, in_block;
 
     if (f == NULL) {
         std::cerr << "Invalid argument to function.\n";
@@ -683,6 +687,35 @@ bool Optimizer::live_variable_analysis(LLVMValueRef f) {
         in_ra = opt_pair.value().first;
         out_ra = opt_pair.value().second;
     }
+
+    changes = false;
+    for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+        // COmpute set of all loads for basic block.
+        loads = std::set<LLVMValueRef>();
+        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i))
+             if (LLVMGetInstructionOpcode(i) == LLVMLoad) loads.insert(i);
+
+        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+            // If a load instruction, remove from set of loads.
+            if (LLVMGetInstructionOpcode(i) == LLVMLoad) loads.erase(i);
+            else if (LLVMGetInstructionOpcode(i) == LLVMStore) {
+                // Check if there are any loads from the same location in out set.
+                in_out = find_instrs_with_operand(out_ra[bb], LLVMGetOperand(i, 1));
+
+                // Check if there are any loads from the same location in the basic block after store instruction.
+                in_block = find_instrs_with_operand(loads, LLVMGetOperand(i, 1));
+
+                if (in_out.empty() && in_block.empty()) {
+                    changes = true;
+                    deletions.insert(i);
+                }
+            }
+        }
+    }
+
+    // Delete all marked load instructions.
+    for (set_it = deletions.begin(); set_it != deletions.end(); ++set_it)
+        LLVMInstructionEraseFromParent(*set_it);
 
     return changes;
 }
