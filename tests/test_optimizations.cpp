@@ -14,6 +14,7 @@ int main(int argc, char** argv) {
     std::string ifile;
     std::string ofile;
     Optimizer optimizer;
+    int ret;
 
     // Check arguments.
     if (argc != 3) {
@@ -28,7 +29,12 @@ int main(int argc, char** argv) {
     // Create LLVM module.
     optimizer = Optimizer(ifile);
 
-    optimizer.optimize();
+    if ((ret = optimizer.optimize()) == -1) {
+        std::cerr << "Optimization failed.\n";
+        return 1;
+    }
+
+    if (ret != 0) std::cout << ret << " unassigned variable(s).\n";
 
     optimizer.write_to_file(ofile);
 

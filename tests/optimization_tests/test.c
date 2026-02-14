@@ -3,7 +3,6 @@ int func(int p) {
     int b;
     int c;
 
-    a = 3;
     b = p;
     
     c = a + b;

@@ -11,6 +11,8 @@
  * - constants propagation
  * - live variable analysis
  *
+ * Citations:
+ * - ChatGPT for help with move assignment (to avoid segfault in main)
  */
 
 #include "optimizer.h"
@@ -472,6 +474,27 @@ Optimizer::~Optimizer(void) {
 }
 
 /*
+ * Move assignment.
+ * Replaces existing object with new object.
+ *
+ * Args:
+ * - other: Newly created object that is being copied to this.
+ *
+ * Returns:
+ * - Newly created object.
+ */
+Optimizer& Optimizer::operator=(Optimizer&& other) {
+    if (this != &other) {
+        if (m != NULL) LLVMDisposeModule(m);
+
+        m = other.m;
+        other.m = NULL;
+    }
+
+    return *this;
+}
+
+/*
  * Writes LLVM module to file.
  * 
  * Args:
@@ -497,15 +520,16 @@ void Optimizer::write_to_file(std::string& fname) {
  *
  * Optimizes until reaching a fixed point.
  *
+ * Returns:
+ * - -1 on failure, otherwise number of unassigned variables
  */
-void Optimizer::optimize(void) {
+int Optimizer::optimize(void) {
     LLVMValueRef f;
     LLVMBasicBlockRef bb;
-    bool sec, dce, cf, cp, changes, inner_changes, lva;
+    bool sec, dce, cf, cp, changes, inner_changes, cont;
+    int num_unassigned, ret_val;
 
-
-
-    // Walk through all basic blocks in each function.
+   // Walk through all basic blocks in each function.
     do {
         changes = false;
         for (f = LLVMGetFirstFunction(m); f != NULL; f = LLVMGetNextFunction(f)) {
@@ -530,13 +554,20 @@ void Optimizer::optimize(void) {
                 }
             } while (inner_changes);
 
-            // Perform live variable analysis.
-            lva = live_variable_analysis(LLVMGetFirstFunction(m));
-            if (lva) changes = true;
         }
     } while (changes);
 
+    // Perform live variable analysis.
+   cont = true;
+    num_unassigned = 0;
+    for (f = LLVMGetFirstFunction(m); f != NULL && cont; f = LLVMGetNextFunction(f)) {
+        if ((ret_val = live_variable_analysis(LLVMGetFirstFunction(m))) == -1) {
+            cont = false;
+            num_unassigned = ret_val;
+        } else num_unassigned += ret_val;
+    }
 
+    return num_unassigned;
 }
 
 /*
@@ -656,22 +687,20 @@ bool Optimizer::constant_propagation(LLVMValueRef f) {
  * - f (LLVMValueRef): function on which to perform optimizations
  *
  * Returns:
- * - True is changes to LLVM module, false otherwise
+ * - -1 on failure, number of loads in IN of first basic block (unassigned variables) on success
  */
-bool Optimizer::live_variable_analysis(LLVMValueRef f) {
+int Optimizer::live_variable_analysis(LLVMValueRef f) {
     LLVMValueRef i;
     LLVMBasicBlockRef bb;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> r, gen_ra, kill_ra, in_ra, out_ra;
+    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>> gen_ra, kill_ra, in_ra, out_ra;
     std::optional<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>> opt_map;
     std::optional<std::pair<std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>, std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>>> opt_pair;
-    std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>::iterator map_it;
     std::set<LLVMValueRef>::iterator set_it;
-    bool changes;
-    std::set<LLVMValueRef> deletions, loads, in_out, in_block;
+    std::set<LLVMValueRef> deletions, loads, r;
 
     if (f == NULL) {
         std::cerr << "Invalid argument to function.\n";
-        return false;
+        return -1;
     }
 
     // Compute relevant sets.
@@ -688,27 +717,23 @@ bool Optimizer::live_variable_analysis(LLVMValueRef f) {
         out_ra = opt_pair.value().second;
     }
 
-    changes = false;
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
-        // COmpute set of all loads for basic block.
-        loads = std::set<LLVMValueRef>();
-        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i))
-             if (LLVMGetInstructionOpcode(i) == LLVMLoad) loads.insert(i);
+        // Add OUT[B] to R.
+        r = out_ra[bb];
 
-        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
-            // If a load instruction, remove from set of loads.
-            if (LLVMGetInstructionOpcode(i) == LLVMLoad) loads.erase(i);
+        // Begin at last instruction in the basic block and work backwards.
+        for (i = LLVMGetLastInstruction(bb); i != NULL; i = LLVMGetPreviousInstruction(i)) {
+            if (LLVMGetInstructionOpcode(i) == LLVMLoad)
+                // Add load instruction to R.
+                r.insert(i);
             else if (LLVMGetInstructionOpcode(i) == LLVMStore) {
-                // Check if there are any loads from the same location in out set.
-                in_out = find_instrs_with_operand(out_ra[bb], LLVMGetOperand(i, 1));
+                // Check if any load instructions rely on this store instruction.
+                loads = find_instrs_with_operand(r, LLVMGetOperand(i, 1));
 
-                // Check if there are any loads from the same location in the basic block after store instruction.
-                in_block = find_instrs_with_operand(loads, LLVMGetOperand(i, 1));
-
-                if (in_out.empty() && in_block.empty()) {
-                    changes = true;
-                    deletions.insert(i);
-                }
+                // Remove load instructions from R since their correspinding store ahs been found.
+                if (!loads.empty()) for (set_it = loads.begin(); set_it != loads.end(); ++set_it) r.erase(*set_it);
+                    // Mark store instruction for deletion if no load instructions depend on it.
+                else deletions.insert(i);
             }
         }
     }
@@ -717,7 +742,7 @@ bool Optimizer::live_variable_analysis(LLVMValueRef f) {
     for (set_it = deletions.begin(); set_it != deletions.end(); ++set_it)
         LLVMInstructionEraseFromParent(*set_it);
 
-    return changes;
+    return in_ra[LLVMGetFirstBasicBlock(f)].size();
 }
 
 /*

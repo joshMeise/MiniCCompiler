@@ -11,6 +11,8 @@
  * - constants propagation
  * - live variable analysis
  *
+ * Citations:
+ * - ChatGPT for help with move assignment (to avoid segfault in main)
  */
 
 #pragma once
@@ -22,14 +24,13 @@
 class Optimizer {
 public:
     Optimizer(void);
-
     Optimizer(std::string& fname);
-
     ~Optimizer(void);
+    Optimizer& operator=(Optimizer&& other);
 
     void write_to_file(std::string& fname);
 
-    void optimize(void);
+    int optimize(void);
 
 private:
     // Instance variables.
@@ -43,7 +44,7 @@ private:
 
     bool constant_propagation(LLVMValueRef f);
 
-    bool live_variable_analysis(LLVMValueRef f);
+    int live_variable_analysis(LLVMValueRef f);
 
     void print_set(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& print_set);
 };
