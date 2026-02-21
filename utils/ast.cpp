@@ -551,7 +551,6 @@ void printStmt(astStmt *stmt, int n){
                 printNode(*it, n+1);
                 it++;
             }
-            printf("HERE\n");
             break;
         }
         case ast_while: {
