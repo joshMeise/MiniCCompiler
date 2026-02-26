@@ -3,11 +3,7 @@
 MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
 
 ## Note to Grader:
-Please see the assignment_2 branch for submission. The README in this contains the algorithm for live code analysis.
-
-I have not yet added a call to my optimizer to the main executable. I will do so once I have completed the AST -> LLVM conversion.
-
-I have an executable for the optimizer in the **tests/** directory. This takes as input an unoptimized `.ll` file and outputs an optimized `.ll` file.
+Please see the assignment_3 branch for submission. The README in this contains the algorithm for live code analysis.
 
 ## Live Variable Analysis
 
