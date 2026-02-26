@@ -467,10 +467,35 @@ Optimizer::Optimizer(std::string& fname) {
 }
 
 /*
+ * Constructs Optimizer object given LLVM objec tgiven an LLVM module reference.
+ *
+ * Args:
+ * - m (LLVMModuleRef): LLVM module reference
+ *
+ * Returns:
+ * - Optimizer: object with fully initialized LLVM module
+ *
+ * Raises:
+ * - runtime_error: module creation failed
+ * - invalid_argument: non-existent module provided as argument.
+ */
+Optimizer::Optimizer(LLVMModuleRef m) {
+    if (m == NULL)
+        std::invalid_argument("Invalid argument to function.\n");
+
+    if ((this->m = LLVMCloneModule(m)) == NULL)
+        std::runtime_error("Module cloning failed.\n");
+
+}
+
+
+/*
  * Destructor for Optimizer object.
  */
 Optimizer::~Optimizer(void) {
     if (m != NULL) LLVMDisposeModule(m);
+    m = NULL;
+    LLVMShutdown();
 }
 
 /*

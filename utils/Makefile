@@ -12,7 +12,7 @@ all: ../lib/libutils.a
 	ar cr ../lib/libutils.a $(OFILES)
 
 y.tab.c y.tab.h: parser.y
-	$(YACC) -d parser.y
+	$(YACC) -d -v parser.y
 
 lex.yy.c: lexer.l y.tab.h
 	$(LEX) lexer.l

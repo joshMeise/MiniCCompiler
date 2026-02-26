@@ -1,5 +1,5 @@
 /*
- * compiler.c - driver program for MiniC program.
+ * compiler.cpp - driver program for MiniC program.
  *
  * Josh Meise
  * 01-24-2026
@@ -10,10 +10,12 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <cstdlib>
 #include <ast.h>
 #include <semantic_analysis.h>
+#include <optimizer.h>
+#include <ir_gen.h>
 
 extern int yyparse(void);
 extern int yylex_destroy(void);
@@ -22,10 +24,13 @@ extern astNode* root;
 
 int main(int argc, char** argv) {
     int ret;
+    Optimizer opt;
+    IRGen ir;
+    LLVMModuleRef m;
 
     // Check arguments.
     if (argc != 2) {
-        fprintf(stderr, "No program provided.\n");
+        std::cout << "usage: ./compiler <infile.c>\n";
         return 1;
     }
 
@@ -37,13 +42,17 @@ int main(int argc, char** argv) {
 
     ret = yyparse();
 
-    printNode(root);
-
     if (ret != 0) exit(EXIT_FAILURE);
 
     ret = semantically_analyze(root);
 
     if (ret != 0) exit(EXIT_FAILURE);
+
+    ir = IRGen(root);
+
+    m = ir.get_module_ref();
+
+    opt = Optimizer(m);
 
     // Clean up.
     freeNode(root);

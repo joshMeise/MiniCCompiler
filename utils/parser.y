@@ -42,7 +42,7 @@ astNode* root;
 %token <ival> NUMBER
 %token <sval> IDENTIFIER
 %token INT VOID EXTERN PRINT READ IF ELSE WHILE RETURN PLUS MINUS TIMES DIVIDE EQUALS LT GT LEQ GEQ EQ
-%type <nval> relational_expr lt_expr gt_expr leq_expr geq_expr eq_expr expr_arg read_expr arithmetic_expr plus_expr minus_expr times_expr divide_expr assignment_stmt assignment_expr expr print_expr print_arg condition_body condition return return_body return_stmt while_stmt if_stmt else_part stmt stmt_or_expr variable_dec code_block argument_body argument function read print program read_arg no_args
+%type <nval> relational_expr lt_expr gt_expr leq_expr geq_expr eq_expr expr_arg read_expr arithmetic_expr plus_expr minus_expr times_expr divide_expr assignment_stmt assignment_expr print_expr print_arg condition_body condition return return_body return_stmt while_stmt if_stmt else_part stmt stmt_or_expr variable_dec code_block argument_body argument function read print program read_arg no_args
 %type <vval> stmts_and_exprs variable_decs code_block_body preamble
 %type <sval> function_name
 
@@ -93,19 +93,19 @@ code_block: '{' code_block '}'                                      { $$ = $2; }
 code_block_body: variable_decs stmts_and_exprs                      { $$ = new vector<astNode*>; $$->insert($$->end(), $1->begin(), $1->end()); $$->insert($$->end(), $2->begin(), $2->end()); delete $1; delete $2; }
                ;
 
-variable_decs: variable_dec variable_decs                           { $2->push_back($1); $$ = $2; }
+variable_decs: variable_dec variable_decs                           { $2->insert($2->begin(), $1); $$ = $2; }
              | /* empty */                                          { $$ = new vector<astNode*>; }
              ;
 
 variable_dec: INT IDENTIFIER ';'                                    { $$ = createDecl($2); free($2); }
             ;
 
-stmts_and_exprs: stmt_or_expr stmts_and_exprs                       { $2->push_back($1); $$ = $2; }
+stmts_and_exprs: stmt_or_expr stmts_and_exprs                       { $2->insert($2->begin(), $1); $$ = $2; }
                | /* empty */                                        { $$ = new vector<astNode*>; }
                ;
 
 stmt_or_expr: stmt                                                  { $$ = $1; }
-            | expr                                                  { $$ = $1; }
+            | print_expr ';'                                        { $$ = $1; }
             ;
 
 stmt: assignment_stmt ';'                                           { $$ = $1; }
@@ -143,11 +143,6 @@ condition: '(' condition ')'                                        { $$ = $2; }
 
 condition_body: assignment_expr                                     { $$ = $1; }
               ;
-
-expr: assignment_expr                                               { $$ = $1; }
-    | read_expr ';'                                                 { $$ = $1; }
-    | print_expr ';'                                                { $$ = $1; }
-    ;
 
 assignment_stmt: IDENTIFIER EQUALS assignment_expr                  { $$ = createAsgn(createVar($1), $3); free($1); }
                ;

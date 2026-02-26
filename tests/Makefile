@@ -4,15 +4,16 @@ WNO=-Wno-deprecated
 LDFLAGS=-L../lib
 LIBS=-lutils
 LLVMFLAGS=`llvm-config-17 --cxxflags --ldflags --libs core` -I /usr/include/llvm-c-17/
-EXECS=test_syntax test_semantics
+CEXECS=test_syntax test_semantics
+CXXEXECS=test_optimizations test_ir_gen
 
-all: $(EXECS) test_optimizations
+all: $(CEXECS) $(CXXEXECS)
 
-test_optimizations: %: %.cpp
+$(CXXEXECS): %: %.cpp
 	$(CXX) $(CXXFLAGS) $(WNO) $< $(LDFLAGS) $(LIBS) $(LLVMFLAGS) -o $@
 
-$(EXECS): %: %.c
+$(CEXECS): %: %.c
 	$(CXX) $(CXXFLAGS) $(WNO) $< $(LDFLAGS) $(LIBS) -o $@
 
 clean:
-	rm -rf $(EXECS) test_optimizations *.ll
+	rm -rf $(CEXECS) $(CXXEXECS) *.ll

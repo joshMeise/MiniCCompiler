@@ -25,6 +25,7 @@ class Optimizer {
 public:
     Optimizer(void);
     Optimizer(std::string& fname);
+    Optimizer(LLVMModuleRef m);
     ~Optimizer(void);
     Optimizer& operator=(Optimizer&& other);
 

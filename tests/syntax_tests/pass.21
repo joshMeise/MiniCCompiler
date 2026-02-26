@@ -7,5 +7,5 @@ int main(void) {
       x = x * 1;
   }
   if ((x == 0)) print(x);
-  return 0;
+  return 3;
 }

@@ -6,7 +6,7 @@ extern int read(void);
 
 int main(void) {
   int x;
-  x = 31;
+  x = 31 + 4;
   while (x > 0) x = x - 1;
 
   if ((x == read())) print(x);
