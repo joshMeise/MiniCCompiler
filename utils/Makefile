@@ -1,5 +1,5 @@
 CXXFLAGS=-Wall -Wall -Wpedantic -std=c++20
-OFILES=ast.o y.tab.o lex.yy.o semantic_analysis.o optimizer.o ir_gen.o
+OFILES=ast.o y.tab.o lex.yy.o semantic_analysis.o optimizer.o ir_gen.o assembly_generator.o
 CXX=g++
 LEX=lex
 YACC=yacc
@@ -21,6 +21,9 @@ ir_gen.o: %.o: %.cpp
 	$(CXX) $(LLVMFLAGS) $(CXXFLAGS) -c $<
 
 optimizer.o: %.o: %.cpp
+	$(CXX) $(LLVMFLAGS) $(CXXFLAGS) -c $<
+
+assembly_generator.o: %.o: %.cpp
 	$(CXX) $(LLVMFLAGS) $(CXXFLAGS) -c $<
 
 %.o: %.c
