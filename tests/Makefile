@@ -5,7 +5,7 @@ LDFLAGS=-L../lib
 LIBS=-lutils
 LLVMFLAGS=`llvm-config-17 --cxxflags --ldflags --libs core` -I /usr/include/llvm-c-17/
 CEXECS=test_syntax test_semantics
-CXXEXECS=test_optimizations test_ir_gen
+CXXEXECS=test_optimizations test_ir_gen test_assembly_gen
 
 all: $(CEXECS) $(CXXEXECS)
 
