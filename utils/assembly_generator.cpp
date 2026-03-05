@@ -10,6 +10,7 @@
 #include <iostream>
 #include <unordered_set>
 #include "assembly_generator.h"
+#include <vector>
 
 #define NUM_REGS 3
 
@@ -97,16 +98,31 @@ static std::optional<std::unordered_map<LLVMValueRef, std::pair<int, int>>> get_
     return live_range;
 }
 
+static std::optional<LLVMValueRef> find_spills(LLVMValueRef inst, std::unordered_map<LLVMValueRef, int> reg_map, std::unordered_map<LLVMValueRef, int> inst_index, std::vector<LLVMValueRef> sorted_list, std::unordered_map<LLVMValueRef, std::pair<int, int>> live_range) {
+    LLVMValueRef v;
+
+    // Check arguments.
+    if (inst == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return std::nullopt;
+    }
+
+    return v;
+}
+
 std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
     LLVMBasicBlockRef bb;
-    LLVMValueRef inst, operand;
+    LLVMValueRef inst, operand, v;
     LLVMOpcode opcode;
     std::unordered_set<int> avail_regs;
+    std::unordered_set<int>::iterator set_it;
     std::unordered_map<LLVMValueRef, int> reg_map;
     std::unordered_map<LLVMValueRef, int> inst_index;
     std::optional<std::unordered_map<LLVMValueRef, int>> inst_index_opt;
     std::optional<std::unordered_map<LLVMValueRef, std::pair<int, int>>> live_range_opt;
     std::unordered_map<LLVMValueRef, std::pair<int, int>> live_range;
+    std::optional<LLVMValueRef> opt_v;
+    std::vector<LLVMValueRef> sorted_list;
     int i;
 
     // Check argument.
@@ -162,12 +178,61 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
             // Instructions that do have a result (ignoring alloca instructions).
             else if (LLVMGetInstructionOpcode(inst) != LLVMAlloca && LLVMGetTypeKind(LLVMTypeOf(inst)) != LLVMVoidTypeKind) {
                 opcode = LLVMGetInstructionOpcode(inst);
-                // Instructions with two operands.
-                // Question: In the algorithm it specifies onluym add, mul and sub but should we be considering lt, gt, etc too?
-                if (opcode == LLVMAdd || opcode == LLVMSub || opcode == LLVMMul) {
+                // This is a special case in which a physical register can be saved if first operand has a register.
+                // Question: In the algorithm it specifies onluym add, mul and sub but should we be considering lt, gt, etc too? Check assembly to make sense of this.
+                if ((opcode == LLVMAdd || opcode == LLVMSub || opcode == LLVMMul) && reg_map[LLVMGetOperand(inst, 0)] != -1 && live_range[LLVMGetOperand(inst, 0)].second == inst_index[inst]) {
+                    // Assign instruction register of first operand.
+                    reg_map[inst] = reg_map[LLVMGetOperand(inst, 0)];
 
+                    // If live range of second operand ends and it has a register assgined to it, make register available.
+                    if (live_range[LLVMGetOperand(inst, 1)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, 1)] != -1)
+                        avail_regs.insert(reg_map[LLVMGetOperand(inst, 1)]);
                 }
+                // If there is an available pyhsical register.
+                else if (!avail_regs.empty()) {
+                    // Get a register from set.
+                    i = 0;
+                    do {
+                        // See if register is in available reegisters map.
+                        set_it = avail_regs.find(i);
+                        i++;
+                    } while (i < NUM_REGS && set_it == avail_regs.end());
 
+                    // Mpa instruction to register.
+                    reg_map[inst] = *set_it;
+
+                    // Remove regster from set of available registers.
+                    avail_regs.erase(*set_it);
+
+                    // Check to see if live range of any operand ends, then add register to list of available registers.
+                    for (i = 0; i < LLVMGetNumOperands(inst); i++) {
+                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, i)] != -1)
+                            avail_regs.insert(reg_map[LLVMGetOperand(inst, i)]);
+                    }
+                }
+                // If there are no registers available.
+                else if (avail_regs.empty()) {
+                    // Compute sorted list.
+
+                    // Find instruction to spill.
+                    opt_v = find_spills(inst, reg_map, inst_index, sorted_list, live_range);
+
+                    if (!opt_v.has_value()) {
+                        std::cerr << "Failed to find spills.\n";
+                        return std::nullopt;
+                    } else
+                        v = opt_v.value();
+
+
+
+
+
+                    // Check to see if live range of any operand ends to add its register back to list of available registers.
+                    for (i = 0; i < LLVMGetNumOperands(inst); i++) {
+                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, i)] != -1)
+                            avail_regs.insert(reg_map[LLVMGetOperand(inst, i)]);
+                    }
+                }
             }
         }
     }
