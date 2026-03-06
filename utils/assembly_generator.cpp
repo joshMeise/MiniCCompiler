@@ -48,6 +48,33 @@ static LLVMValueRef get_last_use(LLVMBasicBlockRef bb, LLVMValueRef inst) {
     }
 }
 
+static int get_num_uses(LLVMBasicBlockRef bb, LLVMValueRef inst) {
+    LLVMUseRef use;
+    int num_uses;
+
+    if (bb == NULL || inst == NULL) {
+        std::cerr << "Inavlid argument(s) to function.\n";
+        return -1;
+    }
+
+    // Find first use of instruction in basic block.
+    if ((use = LLVMGetFirstUse(inst)) == NULL) {
+        std::cerr << "No use found for instruction.\n";
+        return -1;
+    }
+
+    num_uses = 1;
+
+    // Walk through all instructions in basic block.
+    while (use != NULL && LLVMGetInstructionParent(LLVMGetUser(use)) == bb) {
+        use = LLVMGetNextUse(use);
+        num_uses++;
+    }
+
+    return num_uses;
+}
+
+
 static std::optional<std::unordered_map<LLVMValueRef, int>> get_inst_index(LLVMBasicBlockRef bb) {
     std::unordered_map<LLVMValueRef, int> inst_index;
     LLVMValueRef i;
@@ -109,6 +136,53 @@ static std::optional<LLVMValueRef> find_spills(LLVMValueRef inst, std::unordered
 
     return v;
 }
+static std::optional<std::unordered_map<LLVMValueRef, int>> get_num_uses_map(LLVMBasicBlockRef bb) {
+    std::unordered_map<LLVMValueRef, int> map;
+    LLVMValueRef i;
+
+    if (bb == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return std::nullopt;
+    }
+
+    for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+        // Only consider non-alloca instructions with return values.
+        if (LLVMGetInstructionOpcode(i) != LLVMAlloca && LLVMGetTypeKind(LLVMTypeOf(i)) != LLVMVoidTypeKind) {
+            if ((map[i] = get_num_uses(bb, i)) == -1) {
+                std::cerr << "Failed to get number of uses.\n";
+                return std::nullopt;
+            }
+        }
+    }
+
+    return map;
+}
+
+static std::vector<LLVMValueRef> get_sorted_list(std::unordered_map<LLVMValueRef, int> num_uses_map) {
+    std::vector<LLVMValueRef> sorted_list;
+    LLVMValueRef min_ref;
+    std::unordered_map<LLVMValueRef, int>::iterator map_it;
+    int min;
+
+    while (!num_uses_map.empty()) {
+        // Find minimum number of uses currently in map.
+        for (map_it = num_uses_map.begin(); map_it != num_uses_map.end(); map_it++) {
+            if (map_it == num_uses_map.begin()) {
+                min = map_it->second;
+                min_ref = map_it->first;
+            } else if (map_it->second < min) {
+                min = map_it->second;
+                min_ref = map_it->first;
+            }
+        }
+
+        // Remove minimum element from map and add into sorted list.
+        num_uses_map.erase(min_ref);
+        sorted_list.push_back(min_ref);
+    }
+
+    return sorted_list;
+}
 
 std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
     LLVMBasicBlockRef bb;
@@ -122,6 +196,8 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
     std::optional<std::unordered_map<LLVMValueRef, std::pair<int, int>>> live_range_opt;
     std::unordered_map<LLVMValueRef, std::pair<int, int>> live_range;
     std::optional<LLVMValueRef> opt_v;
+    std::optional<std::unordered_map<LLVMValueRef, int>> num_uses_map_opt;
+    std::unordered_map<LLVMValueRef, int> num_uses_map;
     std::vector<LLVMValueRef> sorted_list;
     int i;
 
@@ -150,6 +226,18 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
             return std::nullopt;
         } else
             live_range = live_range_opt.value();
+
+        // Get the number of uses of each instruction.
+        num_uses_map_opt = get_num_uses_map(bb);
+
+        if (!num_uses_map_opt.has_value()) {
+            std::cerr << "Failed to get num uses map.\n";
+            return std::nullopt;
+        } else
+            num_uses_map = num_uses_map_opt.value();
+
+        // Get sorted list of instructions (sorted by number of uses in ascending order).
+        sorted_list = get_sorted_list(num_uses_map);
 
         // Initialize set of available registers.
         for (i = 0; i < NUM_REGS; i++)
@@ -212,8 +300,6 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                 }
                 // If there are no registers available.
                 else if (avail_regs.empty()) {
-                    // Compute sorted list.
-
                     // Find instruction to spill.
                     opt_v = find_spills(inst, reg_map, inst_index, sorted_list, live_range);
 
