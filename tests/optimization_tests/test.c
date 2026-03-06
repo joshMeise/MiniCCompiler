@@ -6,19 +6,20 @@ int func(int p){
 	int b;
 	int c;
     int d;
-    int e;
+
+    a = p;
+
+    b = a + 10;
+
+
 
     a = 4 + p;
 
     b = a + p;
 
-    c = a - 3;
+    c = 74 - a;
 
     d = a - 3;
-
-    e = b + a;
-
-    a = b + e;
 
 	return a + b;
 }

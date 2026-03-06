@@ -126,7 +126,8 @@ static std::optional<std::unordered_map<LLVMValueRef, std::pair<int, int>>> get_
 }
 
 static std::optional<LLVMValueRef> find_spills(LLVMValueRef inst, std::unordered_map<LLVMValueRef, int> reg_map, std::unordered_map<LLVMValueRef, int> inst_index, std::vector<LLVMValueRef> sorted_list, std::unordered_map<LLVMValueRef, std::pair<int, int>> live_range) {
-    LLVMValueRef v;
+    std::vector<LLVMValueRef>::iterator it;
+    int vo, vc, io, ic;
 
     // Check arguments.
     if (inst == NULL) {
@@ -134,7 +135,19 @@ static std::optional<LLVMValueRef> find_spills(LLVMValueRef inst, std::unordered
         return std::nullopt;
     }
 
-    return v;
+    io = live_range[inst].first;
+    ic = live_range[inst].second;
+
+    // Check through every instruction in sorted list.
+    for (it = sorted_list.begin(); it != sorted_list.end(); it++) {
+        // See if instruction has overlapping liveness with instuction.
+        vo = live_range[*it].first;
+        vc = live_range[*it].second;
+        if (!(vc < io || ic < vo) && reg_map[*it] != -1)
+            return *it;
+    }
+
+    return std::nullopt;
 }
 static std::optional<std::unordered_map<LLVMValueRef, int>> get_num_uses_map(LLVMBasicBlockRef bb) {
     std::unordered_map<LLVMValueRef, int> map;
@@ -212,6 +225,7 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
         // Map instructions to number.
         inst_index_opt = get_inst_index(bb);
 
+
         if (!inst_index_opt.has_value()) {
             std::cerr << "Failed to map instructions to indices.\n";
             return std::nullopt;
@@ -247,7 +261,6 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
         for (inst = LLVMGetFirstInstruction(bb); inst != NULL; inst = LLVMGetNextInstruction(inst)) {
             // Instructions that do not have a result.
             if (LLVMGetTypeKind(LLVMTypeOf(inst)) == LLVMVoidTypeKind) {
-
                 // Check all operands and see if live range ends.
                 for (i = 0; i < LLVMGetNumOperands(inst); i++) {
                     operand = LLVMGetOperand(inst, i);
@@ -268,7 +281,7 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                 opcode = LLVMGetInstructionOpcode(inst);
                 // This is a special case in which a physical register can be saved if first operand has a register.
                 // Question: In the algorithm it specifies onluym add, mul and sub but should we be considering lt, gt, etc too? Check assembly to make sense of this.
-                if ((opcode == LLVMAdd || opcode == LLVMSub || opcode == LLVMMul) && reg_map[LLVMGetOperand(inst, 0)] != -1 && live_range[LLVMGetOperand(inst, 0)].second == inst_index[inst]) {
+                if ((opcode == LLVMAdd || opcode == LLVMSub || opcode == LLVMMul) && reg_map.contains(LLVMGetOperand(inst, 0)) && reg_map[LLVMGetOperand(inst, 0)] != -1 && live_range[LLVMGetOperand(inst, 0)].second == inst_index[inst]) {
                     // Assign instruction register of first operand.
                     reg_map[inst] = reg_map[LLVMGetOperand(inst, 0)];
 
@@ -309,9 +322,14 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                     } else
                         v = opt_v.value();
 
-
-
-
+                    // If spill insturction has more uses than current instruction, do not assign current instruction a register.
+                    if (num_uses_map[v] > num_uses_map[inst])
+                        reg_map[inst] = -1;
+                    // Spill V oherwise.
+                    else {
+                        reg_map[inst] = reg_map[v];
+                        reg_map[v] = -1;
+                    }
 
                     // Check to see if live range of any operand ends to add its register back to list of available registers.
                     for (i = 0; i < LLVMGetNumOperands(inst); i++) {
@@ -321,6 +339,12 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                 }
             }
         }
+    }
+
+    for (auto reg : reg_map) {
+        LLVMDumpValue(reg.first);
+        std::cout << std::endl;
+        std::cout << "REG = " << reg.second << std::endl;
     }
 
     return reg_map;

@@ -16,4 +16,4 @@ $(CEXECS): %: %.c
 	$(CXX) $(CXXFLAGS) $(WNO) $< $(LDFLAGS) $(LIBS) -o $@
 
 clean:
-	rm -rf $(CEXECS) $(CXXEXECS) *.ll
+	rm -rf $(CEXECS) $(CXXEXECS)

@@ -20,7 +20,7 @@ define dso_local i32 @func(i32 noundef %0) #0 {
   %12 = add nsw i32 %10, %11
   store i32 %12, ptr %4, align 4
   %13 = load i32, ptr %3, align 4
-  %14 = sub nsw i32 %13, 3
+  %14 = sub nsw i32 74, %13
   store i32 %14, ptr %5, align 4
   %15 = load i32, ptr %3, align 4
   %16 = sub nsw i32 %15, 3
