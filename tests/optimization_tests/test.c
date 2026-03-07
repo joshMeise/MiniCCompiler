@@ -1,25 +1,25 @@
 extern void print(int);
 extern int read();
 
-int func(int p){
-	int a;
-	int b;
-	int c;
-    int d;
+int func(int p) {   // 2
+	int a;          // 3
+	int b;          // 4
+	int c;          // 5
+    int d;          // 6
 
     a = p;
 
     b = a + 10;
 
+    c = p * 10;
 
+    d = a * 10;
 
-    a = 4 + p;
+    print(d);
 
-    b = a + p;
+    d = c + b;
 
-    c = 74 - a;
+    print(d);
 
-    d = a - 3;
-
-	return a + b;
+    return c + p;
 }

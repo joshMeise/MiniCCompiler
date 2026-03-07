@@ -14,40 +14,6 @@
 
 #define NUM_REGS 3
 
-static LLVMValueRef get_last_use(LLVMBasicBlockRef bb, LLVMValueRef inst) {
-    LLVMValueRef last_inst;
-    LLVMUseRef use, last_use;
-
-    if (bb == NULL || inst == NULL) {
-        std::cerr << "Inavlid argument(s) to function.\n";
-        return NULL;
-    }
-
-    // Find first use of instruction in basic block.
-    if ((use = LLVMGetFirstUse(inst)) == NULL) {
-        std::cerr << "No use found for instruction.\n";
-        return NULL;
-    }
-
-    // Walk through all instructions in basic block.
-    last_use = NULL;
-    while (use != NULL && LLVMGetInstructionParent(LLVMGetUser(use)) == bb) {
-        last_use = use;
-        use = LLVMGetNextUse(use);
-    }
-
-    // Return instruction itself if no uses.
-    if (last_use != NULL) {
-        if ((last_inst = LLVMGetUser(last_use)) == NULL) {
-            std::cerr << "No instruction user found.\n";
-            return NULL;
-        }
-        return last_inst;
-    } else {
-        return inst;
-    }
-}
-
 static int get_num_uses(LLVMBasicBlockRef bb, LLVMValueRef inst) {
     LLVMUseRef use;
     int num_uses;
@@ -58,10 +24,8 @@ static int get_num_uses(LLVMBasicBlockRef bb, LLVMValueRef inst) {
     }
 
     // Find first use of instruction in basic block.
-    if ((use = LLVMGetFirstUse(inst)) == NULL) {
-        std::cerr << "No use found for instruction.\n";
-        return -1;
-    }
+    if ((use = LLVMGetFirstUse(inst)) == NULL)
+        return 0;
 
     num_uses = 1;
 
@@ -74,6 +38,29 @@ static int get_num_uses(LLVMBasicBlockRef bb, LLVMValueRef inst) {
     return num_uses;
 }
 
+static LLVMValueRef get_last_use(LLVMBasicBlockRef bb, LLVMValueRef inst) {
+    LLVMValueRef i;
+    int j;
+    bool used;
+
+    if (bb == NULL || inst == NULL) {
+        std::cerr << "Inavlid argument(s) to function.\n";
+        return NULL;
+    }
+
+    if (get_num_uses(bb, inst) == 0)
+        return inst;
+
+    // Loop through basic block from bottom to find last use of instruction.
+    for (i = LLVMGetLastInstruction(bb); i != inst && i != NULL && !used; i = LLVMGetPreviousInstruction(i)) {
+        for (j = 0; j < LLVMGetNumOperands(i) && !used; j++) {
+            if (LLVMGetOperand(i, j) == inst)
+                used = true;
+        }
+    }
+
+    return LLVMGetNextInstruction(i);
+}
 
 static std::optional<std::unordered_map<LLVMValueRef, int>> get_inst_index(LLVMBasicBlockRef bb) {
     std::unordered_map<LLVMValueRef, int> inst_index;
@@ -143,7 +130,7 @@ static std::optional<LLVMValueRef> find_spills(LLVMValueRef inst, std::unordered
         // See if instruction has overlapping liveness with instuction.
         vo = live_range[*it].first;
         vc = live_range[*it].second;
-        if (!(vc < io || ic < vo) && reg_map[*it] != -1)
+        if (!(vc < io || ic < vo) && reg_map.contains(*it) && reg_map[*it] != -1)
             return *it;
     }
 
@@ -291,7 +278,7 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                 }
                 // If there is an available pyhsical register.
                 else if (!avail_regs.empty()) {
-                    // Get a register from set.
+                   // Get a register from set.
                     i = 0;
                     do {
                         // See if register is in available reegisters map.
@@ -339,12 +326,6 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
                 }
             }
         }
-    }
-
-    for (auto reg : reg_map) {
-        LLVMDumpValue(reg.first);
-        std::cout << std::endl;
-        std::cout << "REG = " << reg.second << std::endl;
     }
 
     return reg_map;
