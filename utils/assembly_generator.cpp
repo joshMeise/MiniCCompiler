@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include "assembly_generator.h"
 #include <vector>
+#include <format>
 
 #define NUM_REGS 3
 
@@ -212,12 +213,31 @@ static std::optional<std::unordered_map<LLVMBasicBlockRef, std::string>> create_
     return labels;
 }
 
-static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMModuleRef m) {
+static int print_directives(std::ofstream& ofile) {
+    if (!ofile.is_open()) {
+        std::cerr << "File not open.\n";
+        return -1;
+    }
+
+
+    return 0;
+}
+
+static int print_function_end(std::ofstream& ofile) {
+    if (!ofile.is_open()) {
+        std::cerr << "File not open.\n";
+        return -1;
+    }
+
+
+    return 0;
+}
+
+static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMModuleRef m, int& local_mem) {
     std::unordered_map<LLVMValueRef, int> offset_map;
     LLVMValueRef f, param, i;
     LLVMBasicBlockRef bb;
     LLVMOpcode op;
-    int local_mem;
 
     if (m == NULL) {
         std::cerr << "Invalid argument to funcion.\n";
@@ -259,7 +279,7 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMM
     return offset_map;
 }
 
-std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
+static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
     LLVMBasicBlockRef bb;
     LLVMValueRef inst, operand, v;
     LLVMOpcode opcode;
@@ -406,4 +426,103 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
     return reg_map;
 }
 
+int code_gen(LLVMModuleRef m, std::string fname) {
+    std::ofstream ofile;
+    std::unordered_map<LLVMBasicBlockRef, std::string> labels;
+    std::optional<std::unordered_map<LLVMBasicBlockRef, std::string>> labels_opt;
+    std::unordered_map<LLVMValueRef, int> offset_map;
+    std::optional<std::unordered_map<LLVMValueRef, int>> offset_map_opt;
+    std::unordered_map<LLVMValueRef, int> reg_map;
+    std::optional<std::unordered_map<LLVMValueRef, int>> reg_map_opt;
+    LLVMValueRef f, i, op1;
+    LLVMBasicBlockRef bb;
+    int local_mem;
+    LLVMOpcode op;
+    std::unordered_map<int, std::string> reg;
 
+    if (m == NULL) {
+        std::cerr << "Invlaid argument to function.\n";
+        return -1;
+    }
+
+    // Map register numbers to names.
+    reg[0] = std::string("%ebx");
+    reg[1] = std::string("%ecx");
+    reg[2] = std::string("%edx");
+
+    ofile = std::ofstream(fname);
+
+    if (!ofile.is_open()) {
+        std::cerr << "Failed to open file.\n";
+        return -1;
+    }
+
+    // Mpa basic blocks to label names.
+    labels_opt = create_bb_labels(m);
+
+    if (!labels_opt.has_value()) {
+        std::cerr << "Failed to map basic blocks to labels.\n";
+        return -1;
+    } else
+        labels = labels_opt.value();
+
+    if (print_directives(ofile) != 0) {
+        std::cerr << "Failed to print directives.\n";
+        return -1;
+    }
+
+    // Map instructions to offsets.
+    offset_map_opt = get_offset_map(m, local_mem);
+
+    if (!offset_map_opt.has_value()) {
+        std::cerr << "Failed to get offset map.\n";
+        return -1;
+    } else
+        offset_map = offset_map_opt.value();
+
+    // Get register map.
+    reg_map_opt = allocate_registers(m);
+
+    if (!reg_map_opt.has_value()) {
+        std::cerr << "Failed to allocate registers.\n";
+        return -1;
+    } else
+        reg_map = reg_map_opt.value();
+
+    // There will only be one function.
+    if ((f = LLVMGetFirstFunction(m)) == NULL) {
+        std::cout << "Could not find function ref.\n";
+        return -1;
+    }
+
+    ofile << "pushl %ebp\n";
+    ofile << "movl %esp, %ebp\n";
+    ofile << std::format("subl {}, %esp\n", local_mem);
+    ofile << "pushl %ebx\n";
+
+    for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+        // Emit basic block label.
+        ofile << labels[bb] << std::endl;
+
+        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+            op = LLVMGetInstructionOpcode(i);
+
+            if (op == LLVMRet) {
+                op1 = LLVMGetOperand(i, 0);
+                if (LLVMIsConstant(op1))
+                    ofile << std::format("movl ${}, %eax\n", LLVMConstIntGetSExtValue(op1));
+                else if (reg_map[op1] == -1)
+                    ofile << std::format("mvol {}(%ebp), %eax\n", offset_map[op1]);
+                else if (reg_map[op1] != -1)
+                    ofile << std::format("movl {}, %eax\n", reg[reg_map[op1]]);
+            } else if (op == LLVMLoad) {
+                if (reg_map[i] != -1)
+                    ofile << std::format("movl {}(%ebp), {}\n", offset_map[LLVMGetOperand(i, 0)], reg_map[i]);
+            }
+        }
+    }
+
+    ofile.close();
+
+    return 0;
+}

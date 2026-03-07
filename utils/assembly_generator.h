@@ -11,6 +11,6 @@
 #include <llvm-c/Core.h>
 #include <unordered_map>
 #include <optional>
+#include <fstream>
 
-std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m);
-
+int code_gen(LLVMModuleRef m, std::string fname);
