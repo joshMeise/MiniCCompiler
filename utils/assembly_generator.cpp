@@ -184,6 +184,81 @@ static std::vector<LLVMValueRef> get_sorted_list(std::unordered_map<LLVMValueRef
     return sorted_list;
 }
 
+static std::optional<std::unordered_map<LLVMBasicBlockRef, std::string>> create_bb_labels(LLVMModuleRef m) {
+    LLVMBasicBlockRef bb;
+    LLVMValueRef f;
+    std::unordered_map<LLVMBasicBlockRef, std::string> labels;
+    int num;
+    std::string name;
+
+    if (m == NULL) {
+        std::cerr << "Invalid argument to function.\n";
+        return std::nullopt;
+    }
+
+    // There will only be one function.
+    if ((f = LLVMGetFirstFunction(m)) == NULL) {
+        std::cout << "Could not find function ref.\n";
+        return std::nullopt;
+    }
+
+    num = 0;
+    for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+        name = std::string("BB") + std::to_string(num);
+        labels[bb] = name;
+        num++;
+    }
+
+    return labels;
+}
+
+static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMModuleRef m) {
+    std::unordered_map<LLVMValueRef, int> offset_map;
+    LLVMValueRef f, param, i;
+    LLVMBasicBlockRef bb;
+    LLVMOpcode op;
+    int local_mem;
+
+    if (m == NULL) {
+        std::cerr << "Invalid argument to funcion.\n";
+        return std::nullopt;
+    }
+
+    // There will only be one function.
+    if ((f = LLVMGetFirstFunction(m)) == NULL) {
+        std::cout << "Could not find function ref.\n";
+        return std::nullopt;
+    }
+
+    local_mem = 4;
+
+    // Add parameter to offset map.
+    if ((param = LLVMGetFirstParam(f)) != NULL)
+        offset_map[param] = 8;
+
+    for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+        for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
+            op = LLVMGetInstructionOpcode(i);
+            // Add alloca instructions to offset map.
+            if (op == LLVMAlloca) {
+                // NB: Added 4 after adding here (differs from algorithm).
+                offset_map[i] = -local_mem;
+                local_mem += 4;
+            }
+            else if (op == LLVMStore) {
+                if (param != NULL && LLVMGetOperand(i, 0) == param)
+                    offset_map[LLVMGetOperand(i, 1)] = offset_map[param];
+                else
+                    offset_map[LLVMGetOperand(i, 0)] = offset_map[LLVMGetOperand(i, 1)];
+            }
+            else if (op == LLVMLoad)
+                offset_map[i] = offset_map[LLVMGetOperand(i, 0)];
+        }
+    }
+
+    return offset_map;
+}
+
 std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
     LLVMBasicBlockRef bb;
     LLVMValueRef inst, operand, v;
@@ -330,3 +405,5 @@ std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModu
 
     return reg_map;
 }
+
+
