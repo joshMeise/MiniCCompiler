@@ -16,20 +16,36 @@ define dso_local i32 @func(i32 noundef %0) #0 {
   %8 = load i32, ptr %3, align 4
   %9 = add nsw i32 %8, 10
   store i32 %9, ptr %4, align 4
-  %10 = mul nsw i32 %7, 10
-  store i32 %10, ptr %5, align 4
-  %11 = mul nsw i32 %8, 10
-  store i32 %11, ptr %6, align 4
-  %12 = load i32, ptr %6, align 4
-  call void @print(i32 noundef %12)
-  %13 = load i32, ptr %5, align 4
-  %14 = load i32, ptr %4, align 4
-  %15 = add nsw i32 %13, %14
-  store i32 %15, ptr %6, align 4
-  %16 = load i32, ptr %6, align 4
-  call void @print(i32 noundef %16)
-  %17 = add nsw i32 %13, %7
-  ret i32 %17
+  %10 = load i32, ptr %3, align 4
+  %11 = load i32, ptr %4, align 4
+  %12 = icmp slt i32 %10, %11
+  br i1 %12, label %13, label %16
+
+13:                                               ; preds = %1
+  %14 = load i32, ptr %3, align 4
+  %15 = add nsw i32 %14, 30
+  store i32 %15, ptr %4, align 4
+  br label %16
+
+16:                                               ; preds = %13, %1
+  %17 = load i32, ptr %2, align 4
+  %18 = mul nsw i32 %17, 10
+  store i32 %18, ptr %5, align 4
+  %19 = load i32, ptr %3, align 4
+  %20 = mul nsw i32 %19, 10
+  store i32 %20, ptr %6, align 4
+  %21 = load i32, ptr %6, align 4
+  call void @print(i32 noundef %21)
+  %22 = load i32, ptr %5, align 4
+  %23 = load i32, ptr %4, align 4
+  %24 = add nsw i32 %22, %23
+  store i32 %24, ptr %6, align 4
+  %25 = load i32, ptr %6, align 4
+  call void @print(i32 noundef %25)
+  %26 = load i32, ptr %5, align 4
+  %27 = load i32, ptr %2, align 4
+  %28 = add nsw i32 %26, %27
+  ret i32 %28
 }
 
 declare void @print(i32 noundef) #1

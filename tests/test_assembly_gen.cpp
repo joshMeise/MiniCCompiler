@@ -46,17 +46,10 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    opt = allocate_registers(m);
-
-    if (!opt.has_value()) {
-        std::cerr << "Failed to allocate registers.\n";
+    if (code_gen(m, oname) != 0) {
+        std::cerr << "Failed to generate assembly code.\n";
         return EXIT_FAILURE;
     }
-
-
-
-
-
 
     LLVMDisposeModule(m);
     LLVMShutdown();

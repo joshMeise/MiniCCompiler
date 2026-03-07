@@ -1,5 +1,5 @@
 extern void print(int);
-extern int read();
+extern int read(void);
 
 int func(int p) {   // 2
 	int a;          // 3
@@ -11,18 +11,9 @@ int func(int p) {   // 2
 
     b = a + 10;
 
-    if (a < b)
-        b = a + 30;
-
     c = p * 10;
 
     d = a * 10;
-
-    print(d);
-
-    d = c + b;
-
-    print(d);
 
     return c + p;
 }

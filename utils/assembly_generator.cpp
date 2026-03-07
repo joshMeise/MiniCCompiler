@@ -52,6 +52,7 @@ static LLVMValueRef get_last_use(LLVMBasicBlockRef bb, LLVMValueRef inst) {
     if (get_num_uses(bb, inst) == 0)
         return inst;
 
+    used = false;
     // Loop through basic block from bottom to find last use of instruction.
     for (i = LLVMGetLastInstruction(bb); i != inst && i != NULL && !used; i = LLVMGetPreviousInstruction(i)) {
         for (j = 0; j < LLVMGetNumOperands(i) && !used; j++) {
@@ -219,6 +220,10 @@ static int print_directives(std::ofstream& ofile) {
         return -1;
     }
 
+    ofile << "\t.text\n";
+    ofile << "\t.globl func\n";
+    ofile << "\t.type func, @function\n";
+    ofile << "func:\n";
 
     return 0;
 }
@@ -229,6 +234,8 @@ static int print_function_end(std::ofstream& ofile) {
         return -1;
     }
 
+    ofile << "\tleave\n";
+    ofile << "\tret\n";
 
     return 0;
 }
@@ -434,11 +441,13 @@ int code_gen(LLVMModuleRef m, std::string fname) {
     std::optional<std::unordered_map<LLVMValueRef, int>> offset_map_opt;
     std::unordered_map<LLVMValueRef, int> reg_map;
     std::optional<std::unordered_map<LLVMValueRef, int>> reg_map_opt;
-    LLVMValueRef f, i, op1;
+    LLVMValueRef f, i, op1, op2;
     LLVMBasicBlockRef bb;
     int local_mem;
     LLVMOpcode op;
     std::unordered_map<int, std::string> reg;
+    std::string r, opr, funcname;
+    LLVMIntPredicate pred;
 
     if (m == NULL) {
         std::cerr << "Invlaid argument to function.\n";
@@ -495,14 +504,14 @@ int code_gen(LLVMModuleRef m, std::string fname) {
         return -1;
     }
 
-    ofile << "pushl %ebp\n";
-    ofile << "movl %esp, %ebp\n";
-    ofile << std::format("subl {}, %esp\n", local_mem);
-    ofile << "pushl %ebx\n";
+    ofile << "\tpushl %ebp\n";
+    ofile << "\tmovl %esp, %ebp\n";
+    ofile << std::format("\tsubl ${}, %esp\n", local_mem);
+    ofile << "\tpushl %ebx\n";
 
     for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         // Emit basic block label.
-        ofile << labels[bb] << std::endl;
+        ofile << labels[bb] << ":" << std::endl;
 
         for (i = LLVMGetFirstInstruction(bb); i != NULL; i = LLVMGetNextInstruction(i)) {
             op = LLVMGetInstructionOpcode(i);
@@ -510,17 +519,169 @@ int code_gen(LLVMModuleRef m, std::string fname) {
             if (op == LLVMRet) {
                 op1 = LLVMGetOperand(i, 0);
                 if (LLVMIsConstant(op1))
-                    ofile << std::format("movl ${}, %eax\n", LLVMConstIntGetSExtValue(op1));
+                    ofile << std::format("\tmovl ${}, %eax\n", LLVMConstIntGetSExtValue(op1));
                 else if (reg_map[op1] == -1)
-                    ofile << std::format("mvol {}(%ebp), %eax\n", offset_map[op1]);
+                    ofile << std::format("\tmvol {}(%ebp), %eax\n", offset_map[op1]);
                 else if (reg_map[op1] != -1)
-                    ofile << std::format("movl {}, %eax\n", reg[reg_map[op1]]);
+                    ofile << std::format("\tmovl {}, %eax\n", reg[reg_map[op1]]);
+
+                ofile << "\tpopl %ebx\n";
+
+                if (print_function_end(ofile) != 0) {
+                    std::cerr << "Failed to print function postlude.\n";
+                    return -1;
+                }
             } else if (op == LLVMLoad) {
                 if (reg_map[i] != -1)
-                    ofile << std::format("movl {}(%ebp), {}\n", offset_map[LLVMGetOperand(i, 0)], reg_map[i]);
+                    ofile << std::format("\tmovl {}(%ebp), {}\n", offset_map[LLVMGetOperand(i, 0)], reg[reg_map[i]]);
+            } else if (op == LLVMStore) {
+                op1 = LLVMGetOperand(i, 0);
+                op2 = LLVMGetOperand(i, 1);
+
+                // Ignore stores of parameters.
+                if (!LLVMIsAArgument(op1) && LLVMIsConstant(op1))
+                    ofile << std::format("\tmvol ${}, {}(%ebp)\n", LLVMConstIntGetSExtValue(op1), offset_map[op2]);
+                else if (!LLVMIsAArgument(op1) && reg_map[op1] != -1)
+                    ofile << std::format("\tmovl {}, {}(%ebp)\n", reg[reg_map[op1]], offset_map[op1]);
+                else if (!LLVMIsAArgument(op1) && reg_map[op1] == -1) {
+                    ofile << std::format("\tmovl {}(%ebp), %eax\n", offset_map[op1]);
+                    ofile << std::format("\tmovl %eax, {}(%ebp)\n", offset_map[op2]);
+                }
+            } else if (op == LLVMCall) {
+                ofile << "\tpushl %ecx\n";
+                ofile << "\tpushl %edx\n";
+
+                // Check if function has a parameter.
+                if (LLVMGetNumArgOperands(i) != 0) {
+                    op1 = LLVMGetOperand(i, 1);
+                    if (LLVMIsConstant(op1))
+                        ofile << std::format("\tpushl ${}\n", LLVMConstIntGetSExtValue(op1));
+                    else if (reg_map[op1] != -1)
+                        ofile << std::format("\tpushl {}\n", reg[reg_map[op1]]);
+                    else if (reg_map[op1] == -1)
+                        ofile << std::format("\tpushl {}(%ebp)\n", offset_map[op1]);
+                    funcname = std::string("print");
+                } else
+                    funcname = std::string("read");
+
+                ofile << std::format("\tcall {}\n", funcname);
+
+                // Undo pushing of parameter.
+                if (LLVMGetNumArgOperands(i) != 0)
+                    ofile << "\taddl $4, %esp\n";
+
+                ofile << "\tpopl %edx\n";
+                ofile << "\tpopl %ecx\n";
+
+                // See if called function returns a value.
+                if (LLVMGetTypeKind(LLVMTypeOf(i)) != LLVMVoidTypeKind) {
+                    if (reg_map[i] != -1)
+                        ofile << std::format("\tmovl %eax, {}\n", reg[reg_map[i]]);
+                    else
+                        ofile << std::format("\tmovl %eax, {}(%ebp)\n", offset_map[i]);
+                }
+            } else if (op == LLVMBr) {
+                if (LLVMIsConditional(i)) {
+                    pred = LLVMGetICmpPredicate(LLVMGetOperand(i, 0));
+                    op1 = LLVMGetOperand(i, 2);
+                    op2 = LLVMGetOperand(i, 1);
+
+                    // Set jump type.
+                    switch (pred) {
+                        case LLVMIntEQ:
+                            opr = std::string("je");
+                            break;
+                        case LLVMIntNE:
+                            opr = std::string("jne");
+                            break;
+                        case LLVMIntSGT:
+                            opr = std::string("jg");
+                            break;
+                        case LLVMIntSGE:
+                            opr = std::string("jge");
+                            break;
+                        case LLVMIntSLT:
+                            opr = std::string("jl");
+                            break;
+                        case LLVMIntSLE:
+                            opr = std::string("jle");
+                            break;
+                        default:
+                            std::cerr << "Unknown predicate.\n";
+                            return -1;
+                    }
+
+                    ofile << std::format("\t{} {}\n", opr, labels[LLVMValueAsBasicBlock(op1)]);
+                    ofile << std::format("\tjmp {}\n", labels[LLVMValueAsBasicBlock(op2)]);
+                } else
+                ofile << std::format("\tjmp {}\n", labels[LLVMValueAsBasicBlock(LLVMGetOperand(i, 0))]);
+            } else if (op == LLVMAdd || op == LLVMSub || op == LLVMMul) {
+                // Check whetehr instruction has a physical register assigned to it.
+                if (reg_map[i] == -1)
+                    r = std::string("%eax");
+                else
+                    r = reg[reg_map[i]];
+
+                op1 = LLVMGetOperand(i, 0);
+                op2 = LLVMGetOperand(i, 1);
+
+                if (op == LLVMAdd)
+                    opr = std::string("addl");
+                else if (op == LLVMSub)
+                    opr = std::string("subl");
+                else if (op == LLVMMul)
+                    opr = std::string("imul");
+
+                if (LLVMIsConstant(op1))
+                    ofile << std::format("\tmovl ${}, {}\n", LLVMConstIntGetSExtValue(op1), r);
+                else if (reg_map[op1] != -1)
+                    ofile << std::format("\tmovl {}, {}\n", reg[reg_map[op1]], r);
+                else if (reg_map[op1] == -1)
+                    ofile << std::format("\tmovl {}(%ebp), {}\n", offset_map[op1], r);
+
+                if (LLVMIsConstant(op2))
+                    ofile << std::format("\t{} ${}, {}\n", opr, LLVMConstIntGetSExtValue(op2), r);
+                else if (reg_map[op2] != -1)
+                    ofile << std::format("\t{} {}, {}\n", opr, reg[reg_map[op2]], r);
+                else if (reg_map[op2] == -1)
+                    ofile << std::format("\t{} {}(%ebp), {}\n", opr, offset_map[op2], r);
+
+                // If instruction is in memory, move from register to memory.
+                if (reg_map[i] == -1)
+                    ofile << std::format("\tmovl %eax, {}(%ebp)\n", offset_map[i]);
+            } else if (op == LLVMICmp) {
+                // Check whetehr instruction has a physical register assigned to it.
+                if (reg_map[i] == -1)
+                    r = std::string("%eax");
+                else
+                    r = reg[reg_map[i]];
+
+                op1 = LLVMGetOperand(i, 0);
+                op2 = LLVMGetOperand(i, 1);
+
+                if (LLVMIsConstant(op1))
+                    ofile << std::format("\tmovl ${}, {}\n", LLVMConstIntGetSExtValue(op1), r);
+                else if (reg_map[op1] != -1)
+                    ofile << std::format("\tmovl {}, {}\n", reg[reg_map[op1]], r);
+                else if (reg_map[op1] == -1)
+                    ofile << std::format("\tmovl {}(%ebp), {}\n", offset_map[op1], r);
+
+                if (LLVMIsConstant(op2))
+                    ofile << std::format("\tcmpl ${}, {}\n", LLVMConstIntGetSExtValue(op2), r);
+                else if (reg_map[op2] != -1)
+                    ofile << std::format("\tcmpl {}, {}\n", reg[reg_map[op2]], r);
+                else if (reg_map[op2] == -1)
+                    ofile << std::format("\tcmpl {}(%ebp), {}\n", offset_map[op2], r);
+            } else if (op != LLVMAlloca) {
+                std::cerr << "Invalid instruction type.\n";
+                return -1;
             }
         }
     }
+
+    ofile << ".func_end:\n";
+    ofile << "\t.size func, .func_end-func\n";
+    ofile << "\t.section \".note.GNU-stack\", \"\", @progbits\n";
 
     ofile.close();
 
