@@ -13,7 +13,9 @@ int func(int p) {   // 2
 
     c = p * 10;
 
-    d = a * 10;
+    d = c + b;
 
-    return c + p;
+    print(d);
+
+    return d + p;
 }

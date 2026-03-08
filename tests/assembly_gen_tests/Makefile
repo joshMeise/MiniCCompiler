@@ -1,9 +1,12 @@
 CLANG=clang
 LLVMFILEFLAGS=-S -emit-llvm
-LLVMFILES=test_basic.ll
+LLVMFILES=test_basic.ll test_branches.ll test_fact.ll test_fib.ll test_rem_2.ll test_square.ll
+EXECS=basic branches fact fib rem_2 square
 
-exec: main.c test.s
-	clang -m32 test.s main.c -o test
+all: $(EXECS)
+
+$(EXECS): %: test_%.s main_%.c
+	clang -m32 $^ -o $@
 
 llvm_files: $(LLVMFILES)
 
@@ -11,4 +14,4 @@ llvm_files: $(LLVMFILES)
 	$(CLANG) $(LLVMFILEFLAGS) $< -o $@
 
 clean:
-	rm -rf *.ll *.s test
+	rm -rf *.ll *.s $(EXECS)

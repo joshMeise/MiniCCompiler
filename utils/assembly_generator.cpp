@@ -359,7 +359,7 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(L
                         // Check if live range ends.
                         if (live_range[operand].second == inst_index[inst]) {
                             // If operand is currently assigned a register, add the register to the set of available registers.
-                            if (reg_map[operand] != -1)
+                            if (reg_map.contains(operand) && reg_map[operand] != -1)
                                 avail_regs.insert(reg_map[operand]);
                         }
                     }
@@ -375,12 +375,12 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(L
                     reg_map[inst] = reg_map[LLVMGetOperand(inst, 0)];
 
                     // If live range of second operand ends and it has a register assgined to it, make register available.
-                    if (live_range[LLVMGetOperand(inst, 1)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, 1)] != -1)
+                    if (live_range[LLVMGetOperand(inst, 1)].second == inst_index[inst] && reg_map.contains(LLVMGetOperand(inst, 1)) && reg_map[LLVMGetOperand(inst, 1)] != -1)
                         avail_regs.insert(reg_map[LLVMGetOperand(inst, 1)]);
                 }
                 // If there is an available pyhsical register.
                 else if (!avail_regs.empty()) {
-                   // Get a register from set.
+                    // Get a register from set.
                     i = 0;
                     do {
                         // See if register is in available reegisters map.
@@ -396,7 +396,7 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(L
 
                     // Check to see if live range of any operand ends, then add register to list of available registers.
                     for (i = 0; i < LLVMGetNumOperands(inst); i++) {
-                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, i)] != -1)
+                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map.contains(LLVMGetOperand(inst, i)) && reg_map[LLVMGetOperand(inst, i)] != -1)
                             avail_regs.insert(reg_map[LLVMGetOperand(inst, i)]);
                     }
                 }
@@ -422,7 +422,7 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(L
 
                     // Check to see if live range of any operand ends to add its register back to list of available registers.
                     for (i = 0; i < LLVMGetNumOperands(inst); i++) {
-                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map[LLVMGetOperand(inst, i)] != -1)
+                        if (live_range[LLVMGetOperand(inst, i)].second == inst_index[inst] && reg_map.contains(LLVMGetOperand(inst, i)) && reg_map[LLVMGetOperand(inst, i)] != -1)
                             avail_regs.insert(reg_map[LLVMGetOperand(inst, i)]);
                     }
                 }
@@ -500,7 +500,7 @@ int code_gen(LLVMModuleRef m, std::string fname) {
 
     // There will only be one function.
     if ((f = LLVMGetFirstFunction(m)) == NULL) {
-        std::cout << "Could not find function ref.\n";
+        std::cerr << "Could not find function ref.\n";
         return -1;
     }
 
@@ -521,7 +521,7 @@ int code_gen(LLVMModuleRef m, std::string fname) {
                 if (LLVMIsConstant(op1))
                     ofile << std::format("\tmovl ${}, %eax\n", LLVMConstIntGetSExtValue(op1));
                 else if (reg_map[op1] == -1)
-                    ofile << std::format("\tmvol {}(%ebp), %eax\n", offset_map[op1]);
+                    ofile << std::format("\tmovl {}(%ebp), %eax\n", offset_map[op1]);
                 else if (reg_map[op1] != -1)
                     ofile << std::format("\tmovl {}, %eax\n", reg[reg_map[op1]]);
 
@@ -540,7 +540,7 @@ int code_gen(LLVMModuleRef m, std::string fname) {
 
                 // Ignore stores of parameters.
                 if (!LLVMIsAArgument(op1) && LLVMIsConstant(op1))
-                    ofile << std::format("\tmvol ${}, {}(%ebp)\n", LLVMConstIntGetSExtValue(op1), offset_map[op2]);
+                    ofile << std::format("\tmovl ${}, {}(%ebp)\n", LLVMConstIntGetSExtValue(op1), offset_map[op2]);
                 else if (!LLVMIsAArgument(op1) && reg_map[op1] != -1)
                     ofile << std::format("\tmovl {}, {}(%ebp)\n", reg[reg_map[op1]], offset_map[op1]);
                 else if (!LLVMIsAArgument(op1) && reg_map[op1] == -1) {

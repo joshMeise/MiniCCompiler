@@ -9,11 +9,13 @@ int read(void) {
 }
 
 void print(int x) {
- printf("%d\n", x);
+    printf("%d\n", x);
 }
 
 int main(void) {
-    int i = func(4);
-    printf("In main printing return value of test: %d\n", i);
+    int i = func(5);
+
+    printf("%d\n", i);
+
     return 0;
 }
