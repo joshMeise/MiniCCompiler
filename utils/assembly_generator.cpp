@@ -553,7 +553,9 @@ int code_gen(LLVMModuleRef m, std::string fname) {
 
                 // Check if function has a parameter.
                 if (LLVMGetNumArgOperands(i) != 0) {
-                    op1 = LLVMGetOperand(i, 1);
+                    op1 = LLVMGetArgOperand(i, 0);
+                    LLVMDumpValue(op1);
+                    std::cout << std::endl;
                     if (LLVMIsConstant(op1))
                         ofile << std::format("\tpushl ${}\n", LLVMConstIntGetSExtValue(op1));
                     else if (reg_map[op1] != -1)

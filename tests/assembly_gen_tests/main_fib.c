@@ -15,7 +15,7 @@ void print(int x) {
 int main(void) {
     int i = func(5);
     printf("%d\n", i);
-    if (i == 5)
+    if (i == 8)
         return 0;
     else
         return 1;

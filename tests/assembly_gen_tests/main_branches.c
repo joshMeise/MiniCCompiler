@@ -13,9 +13,9 @@ void print(int x) {
 }
 
 int main(void) {
-    int i = func(-4);
+    int i = func(4);
     printf("%d\n", i);
-    if (i == 96)
+    if (i == 104)
         return 0;
     else
         return 1;

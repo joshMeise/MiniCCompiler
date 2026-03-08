@@ -58,7 +58,7 @@ for exec in ./* ; do
     fi
 done
 
-#make clean > /dev/null
+make clean > /dev/null
 
 popd
 

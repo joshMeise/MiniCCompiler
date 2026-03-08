@@ -11,7 +11,7 @@ int func(int i){
 		b = 20;
 	}
 	else {
-        print(i - 1);
+        print(i);
 		a = 100;
 		b = i + 200;
 	}

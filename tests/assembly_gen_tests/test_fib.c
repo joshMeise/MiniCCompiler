@@ -19,5 +19,5 @@ int func(int n){
         a1 = t;
     }
 
-    return 1;
+    return a1;
 }
