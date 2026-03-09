@@ -10,7 +10,7 @@ int func(int i){
 	a = 10;
 	b = 20;
 	c = a + 10;
-	a = 5;
+	a = 1;
 
 	while (a < i){
 		a = a + 1;

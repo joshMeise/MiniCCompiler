@@ -12,9 +12,10 @@ SYNTAX_TESTDIR=./syntax_tests
 SYNTAX_EXEC=./test_syntax
 SEMANTICS_TESTDIR=./semantics_tests
 SEMANTICS_EXEC=./test_semantics
+OPT_TESTDIR=./optimization_tests
+OPT_EXEC=./test_optimizations
 AGEN_TESTDIR=./assembly_gen_tests
 AGEN_EXEC=./test_assembly_gen
-
 
 # Check arguments.
 if [[ $# -ne 0 && $# -ne 1 ]] ; then
@@ -78,6 +79,42 @@ for test in $SEMANTICS_TESTDIR/fail.* ; do
         echo "PASS: $test"
     fi
 done
+
+echo "[Optimization Tests]"
+
+# Generate LLVM files for each test file.
+pushd $OPT_TESTDIR
+make clean > /dev/null
+make llvm_files > /dev/null
+popd
+
+for test in $OPT_TESTDIR/test*.ll ; do
+    $OPT_EXEC $test $test &> /dev/null
+
+    # Make sure optimized code was generated.
+    if [ $? -ne 0 ] ; then
+        echo "FAILED to optimize code for: $test"
+    fi
+done
+
+# Run all tests.
+pushd $OPT_TESTDIR
+make > /dev/null
+
+for exec in ./* ; do
+    if [ -x $exec ] ; then
+        ./$exec &> /dev/null
+
+        if [ $? -ne 0 ] ; then
+            echo "FAIL: $exec"
+        elif [ $# -eq 1 ] ; then
+            echo "PASS: $exec"
+        fi
+    fi
+done
+
+make clean > /dev/null
+popd
 
 echo "[Assembly Gen Tests]"
 

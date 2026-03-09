@@ -18,11 +18,14 @@ int func(int p) {   // 2
 
     d = a * 10;
 
+    b = b + c;
+    b = b + d;
+
     print(d);
 
     d = c + b;
 
     print(d);
 
-    return c + p;
+    return b + p;
 }
