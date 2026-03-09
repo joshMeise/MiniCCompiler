@@ -2,53 +2,6 @@
 
 MiniCCompiler is a compiler for a subset of the C programming language, developed as part of Dartmouth College's COSC 257 class.
 
-## Note to Grader:
-Please see the assignment_3 branch for submission. The README in this contains the algorithm for live code analysis.
-
-## Live Variable Analysis
-
-### Computing GEN sets:
-- For each basic block, B:
-    - Create an empty GEN set, G
-    - Create empty set to hold all stores, S
-    - For each instruction, I:
-        - If I is a store instruction, add I to S
-        - If I is a load instruction and I does not load from a location to which an instruction in S stores, add I to G
-
-### Computing KILL sets:
-- Create a set of all loads in the function, L
-- For each basic block, B:
-    - Create an empty KILL set, K
-    - For each instruction, I:
-        - If I is a store instruction, add all loads from L to same location as I to K
-
-### Computing IN and OUT sets:
-- For each basic block, B
-    - Initialize IN[B] to GEN[B]
-    - Initialize OUT[B] to empty set
-- change = true
-- while (change) do:
-    - change = false
-    - For each basic block, B:
-        - OUT[B] = union of IN sets of all successors of B
-    - OLD_IN = IN
-    - For each basic block, B:
-        - IN[B] = union of GEN[B] and set difference of OUT[B] and KILL[B]
-    - if OLD_IN != IN, change = true
-
-### Store elimination:
-- For each basic block, B:
-    - Add OUT[B] to a set, R
-    - For each instruction (starting with the last instruction), I:
-        - If I is a load instruction:
-            - Add I to R
-        - If I is a store instruction:
-            - If load instruction(s) to the same location exist in R:
-                - Remove those load instructions from R
-            - Else:
-                - Mark store instruction for deletion
-- Delete all marked store instructions
-
 ## Usage
 
 To run the compiler:
@@ -58,7 +11,11 @@ To run the compiler:
 - In **execs/**:
     - `make clean`
     - `make`
-    - `./compiler <source_code.c>`
+    - `./compiler <source_code.c> <output_file.s>`
+    - If `source_code.c`'s function has an agrument:
+        - `clang -m32 main_arg.c output_file.s -o exec`
+    - If `source_code.c`'s function does not have an argument:
+        - `clang -m32 main_no_args.c output_file.s -o exec`
 
 To run tests:
 - In **utils/**:

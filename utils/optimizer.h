@@ -33,6 +33,8 @@ public:
 
     int optimize(void);
 
+    LLVMModuleRef get_module_ref(void) const;
+
 private:
     // Instance variables.
     LLVMModuleRef m;

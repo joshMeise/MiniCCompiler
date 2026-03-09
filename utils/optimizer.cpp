@@ -596,6 +596,11 @@ int Optimizer::optimize(void) {
 }
 
 /*
+ * Getter method for module.
+ */
+LLVMModuleRef Optimizer::get_module_ref(void) const { return m; }
+
+/*
  * Prints out all instructions in each basic block of all sets.
  */
 void Optimizer::print_set(std::unordered_map<LLVMBasicBlockRef, std::set<LLVMValueRef>>& print_set) {

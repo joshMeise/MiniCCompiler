@@ -12,4 +12,4 @@ $(EXECS): %: %.cpp
 	$(CXX) $(CXXFLAGS) $(WNO) $< $(LDFLAGS) $(LIBS) $(LLVMFLAGS) -o $@
 
 clean:
-	rm -rf $(EXECS)
+	rm -rf $(EXECS) *.s
