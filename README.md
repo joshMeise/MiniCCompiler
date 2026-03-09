@@ -24,6 +24,9 @@ To run tests:
 - In **execs/**:
     - `make clean`
     - `make`
+- In **tests/**:
+    - `make clean`
+    - `make`
     - `run_all_tests.sh [-v]` where the `-v` flag indicates the desire for verbose output
 
 ## Project Structure

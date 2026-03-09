@@ -198,10 +198,17 @@ static std::optional<std::unordered_map<LLVMBasicBlockRef, std::string>> create_
         return std::nullopt;
     }
 
-    // There will only be one function.
+    // There will only be one function with a body.
     if ((f = LLVMGetFirstFunction(m)) == NULL) {
-        std::cout << "Could not find function ref.\n";
+        std::cerr << "Could not find function ref.\n";
         return std::nullopt;
+    }
+
+    while (LLVMGetFirstBasicBlock(f) == NULL) {
+        if ((f = LLVMGetNextFunction(f)) == NULL) {
+            std::cerr << "Could not find function ref.\n";
+            return std::nullopt;
+        }
     }
 
     num = 0;
@@ -251,10 +258,17 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMM
         return std::nullopt;
     }
 
-    // There will only be one function.
+    // There will only be one function with a body.
     if ((f = LLVMGetFirstFunction(m)) == NULL) {
-        std::cout << "Could not find function ref.\n";
+        std::cerr << "Could not find function ref.\n";
         return std::nullopt;
+    }
+
+    while (LLVMGetFirstBasicBlock(f) == NULL) {
+        if ((f = LLVMGetNextFunction(f)) == NULL) {
+            std::cerr << "Could not find function ref.\n";
+            return std::nullopt;
+        }
     }
 
     local_mem = 4;
@@ -288,7 +302,7 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> get_offset_map(LLVMM
 
 static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(LLVMModuleRef m) {
     LLVMBasicBlockRef bb;
-    LLVMValueRef inst, operand, v;
+    LLVMValueRef inst, operand, v, f;
     LLVMOpcode opcode;
     std::unordered_set<int> avail_regs;
     std::unordered_set<int>::iterator set_it;
@@ -309,8 +323,21 @@ static std::optional<std::unordered_map<LLVMValueRef, int>> allocate_registers(L
         return std::nullopt;
     }
 
+    // There will only be one function with a body.
+    if ((f = LLVMGetFirstFunction(m)) == NULL) {
+        std::cerr << "Could not find function ref.\n";
+        return std::nullopt;
+    }
+
+    while (LLVMGetFirstBasicBlock(f) == NULL) {
+        if ((f = LLVMGetNextFunction(f)) == NULL) {
+            std::cerr << "Could not find function ref.\n";
+            return std::nullopt;
+        }
+    }
+
     // There will only be one function.
-    for (bb = LLVMGetFirstBasicBlock(LLVMGetFirstFunction(m)); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
+    for (bb = LLVMGetFirstBasicBlock(f); bb != NULL; bb = LLVMGetNextBasicBlock(bb)) {
         // Map instructions to number.
         inst_index_opt = get_inst_index(bb);
 
@@ -498,10 +525,17 @@ int code_gen(LLVMModuleRef m, std::string fname) {
     } else
         reg_map = reg_map_opt.value();
 
-    // There will only be one function.
+    // There will only be one function with a body.
     if ((f = LLVMGetFirstFunction(m)) == NULL) {
         std::cerr << "Could not find function ref.\n";
         return -1;
+    }
+
+    while (LLVMGetFirstBasicBlock(f) == NULL) {
+        if ((f = LLVMGetNextFunction(f)) == NULL) {
+            std::cerr << "Could not find function ref.\n";
+            return -1;
+        }
     }
 
     ofile << "\tpushl %ebp\n";
@@ -564,7 +598,7 @@ int code_gen(LLVMModuleRef m, std::string fname) {
                         ofile << std::format("\tpushl {}(%ebp)\n", offset_map[op1]);
                     funcname = std::string("print");
                 } else
-                    funcname = std::string("read");
+                funcname = std::string("read");
 
                 ofile << std::format("\tcall {}\n", funcname);
 

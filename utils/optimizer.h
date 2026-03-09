@@ -34,6 +34,7 @@ public:
     int optimize(void);
 
     LLVMModuleRef get_module_ref(void) const;
+    void print_module(void) const;
 
 private:
     // Instance variables.

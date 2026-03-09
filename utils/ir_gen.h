@@ -21,6 +21,7 @@ public:
     ~IRGen(void);
 
     LLVMModuleRef get_module_ref(void) const;
+    void print_module(void) const;
     void write_module_to_file(std::string& fname);
 
     IRGen& operator=(IRGen&& other);

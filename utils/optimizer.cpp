@@ -1,4 +1,5 @@
 /*
+
  * optimizer.cpp - optimizer for MiniC program
  *
  * Josh Meise
@@ -599,6 +600,14 @@ int Optimizer::optimize(void) {
  * Getter method for module.
  */
 LLVMModuleRef Optimizer::get_module_ref(void) const { return m; }
+
+/*
+ * Prints out LLVM Module to stdout.
+ */
+void Optimizer::print_module(void) const {
+    LLVMDumpModule(m);
+    std::cout << std::endl;
+}
 
 /*
  * Prints out all instructions in each basic block of all sets.

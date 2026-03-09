@@ -18,6 +18,8 @@ OPT_TESTDIR=./optimization_tests
 OPT_EXEC=./test_optimizations
 AGEN_TESTDIR=./assembly_gen_tests
 AGEN_EXEC=./test_assembly_gen
+INT_TESTDIR=./integration_tests
+INT_EXEC=../execs/compiler
 
 # Check arguments.
 if [[ $# -ne 0 && $# -ne 1 ]] ; then
@@ -169,6 +171,37 @@ done
 
 # Run all tests.
 pushd $AGEN_TESTDIR
+make > /dev/null
+
+for exec in ./* ; do
+    if [ -x $exec ] ; then
+        ./$exec &> /dev/null
+
+        if [ $? -ne 0 ] ; then
+            echo "FAIL: $exec"
+        elif [ $# -eq 1 ] ; then
+            echo "PASS: $exec"
+        fi
+    fi
+done
+
+make clean > /dev/null
+popd
+
+echo "[Integration Tests]"
+
+for test in $INT_TESTDIR/test*.c ; do
+    outfile=${test%.c}.s
+    $INT_EXEC $test $outfile &> /dev/null
+
+    # Make sure assembly code was generated.
+    if [ $? -ne 0 ] ; then
+        echo "FAILED to build assembly code for: $test"
+    fi
+done
+
+# Run all tests.
+pushd $INT_TESTDIR
 make > /dev/null
 
 for exec in ./* ; do

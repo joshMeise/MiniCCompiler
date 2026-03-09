@@ -101,6 +101,11 @@ void IRGen::write_module_to_file(std::string& fname) {
     }
 }
 
+void IRGen::print_module(void) const {
+    LLVMDumpModule(m);
+    std::cout << std::endl;
+}
+
 IRGen& IRGen::operator=(IRGen&& other) {
     if (this != &other) {
         // Ensure all is clean in new object; avoid memeory leaks.

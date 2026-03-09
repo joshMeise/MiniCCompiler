@@ -36,7 +36,7 @@ jobs:
         working-directory: tests
         run: |
           make clean
-          make
+          make test_syntax
 
       - name: Run tests
         working-directory: tests
@@ -71,7 +71,7 @@ jobs:
         working-directory: tests
         run: |
           make clean
-          make
+          make test_semantics
 
       - name: Run tests
         working-directory: tests
@@ -106,7 +106,7 @@ jobs:
         working-directory: tests
         run: |
           make clean
-          make
+          make test_ir_gen
 
       - name: Run tests
         working-directory: tests
@@ -141,13 +141,13 @@ jobs:
         working-directory: tests
         run: |
           make clean
-          make
+          make test_optimizations
 
       - name: Run tests
         working-directory: tests
         run: ./run_optimization_tests.sh
 
-  test-assembly_gen:
+  test-assembly-gen:
     runs-on: ubuntu-latest
 
     steps:
@@ -176,8 +176,44 @@ jobs:
         working-directory: tests
         run: |
           make clean
-          make
+          make test_assembly_gen
 
       - name: Run tests
         working-directory: tests
         run: ./run_assembly_gen_tests.sh
+
+
+  test-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make test script executable
+        run: chmod +x tests/run_integration_tests.sh
+
+      - name: Install LLVM 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget software-properties-common gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 17
+          sudo apt-get install -y llvm-17 llvm-17-dev clang-17
+
+      - name: Build utilites
+        working-directory: utils
+        run: |
+          make clean
+          make
+
+      - name: Build compiler
+        working-directory: execs
+        run: |
+          make clean
+          make
+
+      - name: Run tests
+        working-directory: tests
+        run: ./run_integration_tests.sh
