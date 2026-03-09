@@ -1,15 +1,18 @@
 extern void print(int);
 extern int read();
 
-int func(int n){
+int func(void){
 	int max;
 	int i;
 	int a;
+    int n;
 	i = 0;
 	max = 0;
+
+    n = 5;
 	
 	while (i < n){ 
-		a = read();
+		a = i;
 		if (a > max)
 			max = a;
 		i = i + 1;

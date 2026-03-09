@@ -12,6 +12,8 @@ SYNTAX_TESTDIR=./syntax_tests
 SYNTAX_EXEC=./test_syntax
 SEMANTICS_TESTDIR=./semantics_tests
 SEMANTICS_EXEC=./test_semantics
+IGEN_TESTDIR=./ir_gen_tests
+IGEN_EXEC=./test_ir_gen
 OPT_TESTDIR=./optimization_tests
 OPT_EXEC=./test_optimizations
 AGEN_TESTDIR=./assembly_gen_tests
@@ -79,6 +81,37 @@ for test in $SEMANTICS_TESTDIR/fail.* ; do
         echo "PASS: $test"
     fi
 done
+
+echo "[IR Gen Tests]"
+
+for test in $IGEN_TESTDIR/test*.c ; do
+    outfile=${test%.c}.ll
+    $IGEN_EXEC $test $outfile &> /dev/null
+
+    # Make sure optimized code was generated.
+    if [ $? -ne 0 ] ; then
+        echo "FAILED to build IR for: $test"
+    fi
+done
+
+# Run all tests.
+pushd $IGEN_TESTDIR
+make > /dev/null
+
+for exec in ./* ; do
+    if [ -x $exec ] ; then
+        ./$exec &> /dev/null
+
+        if [ $? -ne 0 ] ; then
+            echo "FAIL: $exec"
+        elif [ $# -eq 1 ] ; then
+            echo "PASS: $exec"
+        fi
+    fi
+done
+
+make clean > /dev/null
+popd
 
 echo "[Optimization Tests]"
 

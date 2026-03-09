@@ -41,7 +41,7 @@ IRGen::IRGen(astNode* root) {
     if ((m = LLVMModuleCreateWithName("")) == NULL)
         throw std::runtime_error("Failed to create LLVM module.\n");
 
-    LLVMSetTarget(m, "x86_64-pc-linux-gnu");
+    LLVMSetTarget(m, "i386-pc-linux-gnu");
 
     // Create builder.
     if ((b = LLVMCreateBuilder()) == NULL)

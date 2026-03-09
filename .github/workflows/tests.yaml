@@ -77,6 +77,41 @@ jobs:
         working-directory: tests
         run: ./run_semantics_tests.sh
 
+  test-ir-gen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make test script executable
+        run: chmod +x tests/run_ir_gen_tests.sh
+
+      - name: Install LLVM 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget software-properties-common gnupg
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 17
+          sudo apt-get install -y llvm-17 llvm-17-dev clang-17
+
+      - name: Build utilites
+        working-directory: utils
+        run: |
+          make clean
+          make
+
+      - name: Build test harness
+        working-directory: tests
+        run: |
+          make clean
+          make
+
+      - name: Run tests
+        working-directory: tests
+        run: ./run_ir_gen_tests.sh
+
   test-optimizations:
     runs-on: ubuntu-latest
 

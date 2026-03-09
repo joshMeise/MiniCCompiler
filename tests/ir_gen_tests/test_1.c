@@ -8,3 +8,4 @@ int func(int p){
 	b = a + p;
 	return b;
 }
+
